@@ -257,7 +257,7 @@ export default function Events() {
         (pastEventPage + 1) * ITEMS_PER_PAGE
     );
 
-    const EventCard = ({ event, index }: { event: Event; index: number }) => (
+    const EventCard = ({ event, index, isPast = false }: { event: Event; index: number; isPast?: boolean }) => (
         <Card
             key={event._id}
             className="overflow-hidden border-border/30 bg-card animate-fade-in group flex flex-col h-full"
@@ -275,6 +275,11 @@ export default function Events() {
                     {event.category && (
                         <Badge variant="secondary" className="text-xs font-medium">
                             {event.category}
+                        </Badge>
+                    )}
+                    {isPast && (
+                        <Badge variant="outline" className="text-xs font-medium text-muted-foreground">
+                            Past Event
                         </Badge>
                     )}
                 </div>
@@ -308,40 +313,43 @@ export default function Events() {
                     </div>
                 </div>
 
-                {/* Action Button - Colorful Pill Style */}
-                <Button
-                    size="sm"
-                    className={`w-full h-10 font-semibold rounded-full transition-all duration-200 focus-visible:ring-0 focus-visible:ring-offset-0 ${registeredEvents.has(event._id)
-                        ? 'bg-red-500/10 text-red-600 hover:bg-red-500/25 hover:text-red-700 border border-red-500/20 hover:border-red-500/40 dark:bg-red-500/15 dark:text-red-400 dark:hover:bg-red-500/30 dark:hover:text-red-300'
-                        : 'bg-green-500/10 text-green-600 hover:bg-green-500/25 hover:text-green-700 border border-green-500/20 hover:border-green-500/40 dark:bg-green-500/15 dark:text-green-400 dark:hover:bg-green-500/30 dark:hover:text-green-300'
-                        }`}
-                    onClick={() => registeredEvents.has(event._id)
-                        ? handleLeaveEvent(event._id)
-                        : handleJoinEvent(event._id)
-                    }
-                    disabled={
-                        !registeredEvents.has(event._id) && 
-                        event.maxAttendees !== undefined && 
-                        event.participants.length >= event.maxAttendees
-                    }
-                    variant="ghost"
-                >
-                    {joiningEvent === event._id ? (
-                        <>
-                            <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                            {registeredEvents.has(event._id) ? "Leaving..." : "Joining..."}
-                        </>
-                    ) : registeredEvents.has(event._id) ? (
-                        <>
-                            <Check className="w-4 h-4 mr-2" />
-                            Leave Event
-                        </>
-                    ) : (event.maxAttendees && event.participants.length >= event.maxAttendees) ? (
-                        "Event Full"
-                    ) : (
-                        "Join Event"
-                    )}
-                </Button>
+                {/* Action Button - Hide for past events unless already registered */}
+                {(!isPast || registeredEvents.has(event._id)) && (
+                    <Button
+                        size="sm"
+                        className={`w-full h-10 font-semibold rounded-full transition-all duration-200 focus-visible:ring-0 focus-visible:ring-offset-0 ${registeredEvents.has(event._id)
+                            ? 'bg-red-500/10 text-red-600 hover:bg-red-500/25 hover:text-red-700 border border-red-500/20 hover:border-red-500/40 dark:bg-red-500/15 dark:text-red-400 dark:hover:bg-red-500/30 dark:hover:text-red-300'
+                            : 'bg-green-500/10 text-green-600 hover:bg-green-500/25 hover:text-green-700 border border-green-500/20 hover:border-green-500/40 dark:bg-green-500/15 dark:text-green-400 dark:hover:bg-green-500/30 dark:hover:text-green-300'
+                            }`}
+                        onClick={() => registeredEvents.has(event._id)
+                            ? handleLeaveEvent(event._id)
+                            : handleJoinEvent(event._id)
+                        }
+                        disabled={
+                            isPast || // Disable for past events
+                            (!registeredEvents.has(event._id) && 
+                            event.maxAttendees !== undefined && 
+                            event.participants.length >= event.maxAttendees)
+                        }
+                        variant="ghost"
+                    >
+                        {joiningEvent === event._id ? (
+                            <>
+                                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                                {registeredEvents.has(event._id) ? "Leaving..." : "Joining..."}
+                            </>
+                        ) : registeredEvents.has(event._id) ? (
+                            <>
+                                <Check className="w-4 h-4 mr-2" />
+                                Leave Event
+                            </>
+                        ) : (event.maxAttendees && event.participants.length >= event.maxAttendees) ? (
+                            "Event Full"
+                        ) : (
+                            "Join Event"
+                        )}
+                    </Button>
+                )}
             </CardContent>
         </Card>
     );
@@ -477,7 +485,7 @@ export default function Events() {
                     <>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                             {paginatedActiveEvents.map((event, index) => (
-                                <EventCard key={event._id} event={event} index={index} />
+                                <EventCard key={event._id} event={event} index={index} isPast={false} />
                             ))}
                         </div>
                         {activeEventsTotalPages > 1 && (
@@ -513,7 +521,7 @@ export default function Events() {
                         <>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                                 {paginatedPastEvents.map((event, index) => (
-                                    <EventCard key={event._id} event={event} index={index} />
+                                    <EventCard key={event._id} event={event} index={index} isPast={true} />
                                 ))}
                             </div>
                             {pastEventsTotalPages > 1 && (

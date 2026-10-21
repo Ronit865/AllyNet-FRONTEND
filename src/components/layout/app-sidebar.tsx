@@ -6,13 +6,12 @@ import {
   Calendar,
   Briefcase,
   Heart,
-  MessageCircle,
-  MessageSquare,
+  MessagesSquare,
+  Mail,
   Settings,
   Sun,
   Moon,
   BarChart3,
-  Mail,
   ChevronLeft,
   ChevronRight,
   Flag,
@@ -39,7 +38,7 @@ const baseNavigation = [
   { title: "Events", url: "/events", icon: Calendar, color: "text-blue-500", activeColor: "bg-blue-500/10 text-blue-600 dark:text-blue-400" },
   { title: "Jobs", url: "/jobs", icon: Briefcase, color: "text-orange-500", activeColor: "bg-orange-500/10 text-orange-600 dark:text-orange-400" },
   { title: "Donations", url: "/donations", icon: Heart, color: "text-emerald-500", activeColor: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" },
-  { title: "Community Chat", url: "/communications", icon: MessageSquare, color: "text-indigo-500", activeColor: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400" },
+  { title: "Community Chat", url: "/communications", icon: MessagesSquare, color: "text-indigo-500", activeColor: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400" },
 ];
 
 const adminNavigation = [

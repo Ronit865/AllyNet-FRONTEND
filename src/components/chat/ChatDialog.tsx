@@ -1,5 +1,5 @@
 import { useState, useEffect, useLayoutEffect, useRef } from "react";
-import { Send, MoreVertical, Loader2, Trash2, ArrowLeft, Search, MessageCircle } from "lucide-react";
+import { Send, MoreVertical, Loader2, Trash2, ArrowLeft, Search, MessagesSquare, Check, CheckCheck } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -11,8 +11,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { OnlineStatusIndicator } from "@/components/ui/online-status-indicator";
 import { messageService, userService } from "@/services/ApiServices";
 import { useToast } from "@/hooks/use-toast";
+import { useSocket } from "@/hooks/useSocket";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { containsInappropriateContent } from "@/lib/contentFilter";
 import { formatDistanceToNow } from "date-fns";
 
@@ -35,6 +38,9 @@ interface Message {
   content: string;
   createdAt: string;
   read: boolean;
+  readAt?: string;
+  delivered?: boolean;
+  deliveredAt?: string;
 }
 
 interface Conversation {
@@ -63,11 +69,15 @@ export function ChatDialog({
   const [newMessage, setNewMessage] = useState("");
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [conversationId, setConversationId] = useState(initialConversationId);
-  const [participant, setParticipant] = useState({ name: participantName, avatar: participantAvatar });
+  const [participant, setParticipant] = useState({ name: participantName, avatar: participantAvatar, _id: userId });
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showConversationList, setShowConversationList] = useState(!initialConversationId && !userId);
+  const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
+  const [typingTimeout, setTypingTimeout] = useState<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
+  const { socket, onlineUsers } = useSocket();
+  const isParticipantOnline = useOnlineStatus(participant._id);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -134,31 +144,69 @@ export function ChatDialog({
     }
   }, [open, userId, initialConversationId]);
 
-  // Auto-refresh messages every 2 seconds when conversation is open
+  // Real-time message listener
   useEffect(() => {
-    if (!open || !conversationId) return;
+    if (!socket || !conversationId || !open) return;
 
-    const interval = setInterval(async () => {
-      try {
-        const response = await messageService.getConversationMessages(conversationId, { limit: 50 });
-        const messagesData = response?.data?.messages || response?.data || [];
-        const newMessages = Array.isArray(messagesData) ? messagesData : [];
-
-        // Only update if there are new messages (by ID comparison or length)
-        // Simple length check + last ID check is efficient enough for polling
-        if (newMessages.length > messages.length ||
-          (newMessages.length > 0 && messages.length > 0 && newMessages[newMessages.length - 1]._id !== messages[messages.length - 1]._id)) {
-          setMessages(newMessages);
-          await messageService.markMessagesAsRead(conversationId);
-          // Scroll will happen via the useEffect dependency on 'messages'
-        }
-      } catch (error) {
-        // Error refreshing messages
+    const handleNewMessage = (message: Message) => {
+      if (message.conversation?.toString() === conversationId) {
+        setMessages(prev => {
+          // Avoid duplicates
+          if (prev.some(m => m._id === message._id)) return prev;
+          return [...prev, { ...message, delivered: true }];
+        });
+        
+        // Mark as read if dialog is open
+        messageService.markMessagesAsRead(conversationId);
       }
-    }, 2000);
+    };
 
-    return () => clearInterval(interval);
-  }, [open, conversationId, messages]);
+    const handleMessageRead = (data: { conversationId: string; messageIds: string[]; readAt: string }) => {
+      if (data.conversationId === conversationId) {
+        setMessages(prev => prev.map(m => 
+          data.messageIds.includes(m._id) 
+            ? { ...m, read: true, readAt: data.readAt }
+            : m
+        ));
+      }
+    };
+
+    const handleMessageDelivered = (data: { conversationId: string; messageId: string; deliveredAt: string }) => {
+      if (data.conversationId === conversationId) {
+        setMessages(prev => prev.map(m => 
+          m._id === data.messageId 
+            ? { ...m, delivered: true, deliveredAt: data.deliveredAt }
+            : m
+        ));
+      }
+    };
+
+    const handleTypingIndicator = (data: { userId: string; conversationId: string; isTyping: boolean }) => {
+      if (data.conversationId === conversationId && data.userId !== currentUser?._id) {
+        setTypingUsers(prev => {
+          const updated = new Set(prev);
+          if (data.isTyping) {
+            updated.add(data.userId);
+          } else {
+            updated.delete(data.userId);
+          }
+          return updated;
+        });
+      }
+    };
+
+    socket.on('message:new', handleNewMessage);
+    socket.on('message:read', handleMessageRead);
+    socket.on('message:delivered', handleMessageDelivered);
+    socket.on('typing:indicator', handleTypingIndicator);
+
+    return () => {
+      socket.off('message:new', handleNewMessage);
+      socket.off('message:read', handleMessageRead);
+      socket.off('message:delivered', handleMessageDelivered);
+      socket.off('typing:indicator', handleTypingIndicator);
+    };
+  }, [socket, conversationId, open, currentUser]);
 
   const fetchConversations = async () => {
     try {
@@ -182,7 +230,8 @@ export function ChatDialog({
         const otherParticipant = conv.participants?.find((p: any) => p._id !== currentUser?._id);
         setParticipant({
           name: otherParticipant?.name || participantName,
-          avatar: otherParticipant?.avatar || participantAvatar
+          avatar: otherParticipant?.avatar || participantAvatar,
+          _id: otherParticipant?._id || userId
         });
         await fetchMessagesForConversation(conv._id);
       }
@@ -224,7 +273,8 @@ export function ChatDialog({
     setConversationId(conv._id);
     setParticipant({
       name: conv.participant?.name,
-      avatar: conv.participant?.avatar
+      avatar: conv.participant?.avatar,
+      _id: conv.participant?._id
     });
     setShowConversationList(false);
     fetchMessagesForConversation(conv._id);
@@ -237,8 +287,46 @@ export function ChatDialog({
     fetchConversations();
   };
 
+  const handleMessageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setNewMessage(value);
+
+    if (!socket || !conversationId) return;
+
+    // Emit typing start
+    if (value.trim()) {
+      socket.emit('typing:start', { conversationId });
+
+      // Clear existing timeout
+      if (typingTimeout) {
+        clearTimeout(typingTimeout);
+      }
+
+      // Set timeout to stop typing after 2s of inactivity
+      const timeout = setTimeout(() => {
+        socket.emit('typing:stop', { conversationId });
+      }, 2000);
+
+      setTypingTimeout(timeout);
+    } else {
+      // Empty input, stop typing immediately
+      socket.emit('typing:stop', { conversationId });
+      if (typingTimeout) {
+        clearTimeout(typingTimeout);
+        setTypingTimeout(null);
+      }
+    }
+  };
+
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !conversationId) return;
+
+    // Stop typing indicator
+    if (socket && typingTimeout) {
+      socket.emit('typing:stop', { conversationId });
+      clearTimeout(typingTimeout);
+      setTypingTimeout(null);
+    }
 
     if (containsInappropriateContent(newMessage)) {
       toast({
@@ -250,7 +338,7 @@ export function ChatDialog({
     }
 
     // Create optimistic message for instant UI update
-    const optimisticMessage = {
+    const optimisticMessage: Message = {
       _id: `temp_${Date.now()}`,
       content: newMessage.trim(),
       sender: {
@@ -259,7 +347,8 @@ export function ChatDialog({
         avatar: currentUser?.avatar || ''
       },
       createdAt: new Date().toISOString(),
-      read: false
+      read: false,
+      delivered: false
     };
 
     // Immediately update UI
@@ -272,8 +361,12 @@ export function ChatDialog({
       const response = await messageService.sendMessage(conversationId, optimisticMessage.content);
       const newMsg = response?.data;
       if (newMsg) {
-        // Replace optimistic message with real one
-        setMessages(prev => prev.map(m => m._id === optimisticMessage._id ? newMsg : m));
+        // Replace optimistic message with real one and mark as delivered
+        setMessages(prev => prev.map(m => 
+          m._id === optimisticMessage._id 
+            ? { ...newMsg, delivered: true, deliveredAt: new Date().toISOString() }
+            : m
+        ));
       }
     } catch (error: any) {
       // Remove optimistic message on error
@@ -368,38 +461,49 @@ export function ChatDialog({
                 </div>
               ) : filteredConversations.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full py-20">
-                  <MessageCircle className="w-12 h-12 text-muted-foreground/30 mb-3" />
+                  <MessagesSquare className="w-12 h-12 text-muted-foreground/30 mb-3" />
                   <p className="text-muted-foreground text-sm">No conversations yet</p>
                 </div>
               ) : (
                 <div className="divide-y">
-                  {filteredConversations.map((conv) => (
-                    <div
-                      key={conv._id}
-                      onClick={() => handleSelectConversation(conv)}
-                      className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 hover:bg-accent cursor-pointer transition-colors active:bg-accent/80"
-                    >
-                      <Avatar className="w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0">
-                        <AvatarImage src={conv.participant?.avatar} />
-                        <AvatarFallback className="bg-primary/20 text-primary font-medium text-sm sm:text-base">
-                          {conv.participant?.name?.split(' ').map(n => n[0]).join('') || 'U'}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="font-medium truncate text-sm sm:text-base">{conv.participant?.name}</p>
-                          {conv.lastMessage?.createdAt && (
-                            <span className="text-[10px] sm:text-xs text-muted-foreground flex-shrink-0">
-                              {getTimeAgo(conv.lastMessage.createdAt)}
-                            </span>
-                          )}
+                  {filteredConversations.map((conv) => {
+                    const isOnline = onlineUsers.has(conv.participant?._id);
+                    return (
+                      <div
+                        key={conv._id}
+                        onClick={() => handleSelectConversation(conv)}
+                        className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 hover:bg-accent cursor-pointer transition-colors active:bg-accent/80"
+                      >
+                        <div className="relative">
+                          <Avatar className="w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0">
+                            <AvatarImage src={conv.participant?.avatar} />
+                            <AvatarFallback className="bg-primary/20 text-primary font-medium text-sm sm:text-base">
+                              {conv.participant?.name?.split(' ').map(n => n[0]).join('') || 'U'}
+                            </AvatarFallback>
+                          </Avatar>
+                          <OnlineStatusIndicator online={isOnline} size="sm" position="bottom-right" />
                         </div>
-                        <p className="text-xs sm:text-sm text-muted-foreground truncate">
-                          {conv.lastMessage?.content || 'No messages yet'}
-                        </p>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium truncate text-sm sm:text-base">{conv.participant?.name}</p>
+                              {isOnline && (
+                                <span className="text-[10px] text-green-500 font-medium">•</span>
+                              )}
+                            </div>
+                            {conv.lastMessage?.createdAt && (
+                              <span className="text-[10px] sm:text-xs text-muted-foreground flex-shrink-0">
+                                {getTimeAgo(conv.lastMessage.createdAt)}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs sm:text-sm text-muted-foreground truncate">
+                            {conv.lastMessage?.content || 'No messages yet'}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </ScrollArea>
@@ -417,13 +521,21 @@ export function ChatDialog({
                 >
                   <ArrowLeft className="w-4 h-4" />
                 </Button>
-                <Avatar className="w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0">
-                  <AvatarImage src={participant.avatar} />
-                  <AvatarFallback className="bg-primary/20 text-primary font-medium text-sm">
-                    {participant.name?.split(' ').map(n => n[0]).join('') || 'U'}
-                  </AvatarFallback>
-                </Avatar>
-                <DialogTitle className="text-base sm:text-lg font-semibold truncate">{participant.name || 'Chat'}</DialogTitle>
+                <div className="relative">
+                  <Avatar className="w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0">
+                    <AvatarImage src={participant.avatar} />
+                    <AvatarFallback className="bg-primary/20 text-primary font-medium text-sm">
+                      {participant.name?.split(' ').map(n => n[0]).join('') || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <OnlineStatusIndicator online={isParticipantOnline} size="sm" position="bottom-right" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <DialogTitle className="text-base sm:text-lg font-semibold truncate">{participant.name || 'Chat'}</DialogTitle>
+                  {isParticipantOnline && (
+                    <p className="text-xs text-green-500">Online</p>
+                  )}
+                </div>
               </div>
             </DialogHeader>
 
@@ -439,28 +551,52 @@ export function ChatDialog({
                 </div>
               ) : (
                 <div className="space-y-3 sm:space-y-4">
-                  {messages.map((message) => {
+                  {messages.map((message, index) => {
                     const isMe = message.sender._id === currentUser?._id;
                     const canDelete = isMe && canDeleteMessage(message.createdAt);
+                    const showAvatar = !isMe && (index === messages.length - 1 || messages[index + 1]?.sender._id !== message.sender._id);
+                    const isFirstInGroup = index === 0 || messages[index - 1]?.sender._id !== message.sender._id;
+                    const isLastInGroup = index === messages.length - 1 || messages[index + 1]?.sender._id !== message.sender._id;
 
                     return (
                       <div
                         key={message._id}
-                        className={`flex ${isMe ? "justify-end" : "justify-start"} will-change-transform`}
+                        className={`flex ${isMe ? "justify-end" : "justify-start"} will-change-transform animate-in fade-in slide-in-from-bottom-2 duration-300`}
                       >
-                        <div className={`flex items-end gap-1 max-w-[85%] sm:max-w-[70%] group ${isMe ? "flex-row" : "flex-row-reverse"}`}>
+                        <div className={`flex items-end gap-1.5 max-w-[85%] sm:max-w-[70%] group ${isMe ? "flex-row" : "flex-row-reverse"}`}>
                           <div className="relative">
-                            <div className={`rounded-2xl px-3 sm:px-4 py-2 ${isMe
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-muted"
-                              }`}>
-                              <p className="text-sm break-words">{message.content}</p>
-                              <p className={`text-[10px] sm:text-xs mt-1 ${isMe
-                                ? "text-primary-foreground/70"
-                                : "text-muted-foreground"
+                            <div 
+                              className={`rounded-2xl px-3 sm:px-4 py-2 shadow-sm ${
+                                isMe
+                                  ? "bg-primary text-primary-foreground rounded-tr-sm" 
+                                  : "bg-muted rounded-tl-sm"
+                              } ${
+                                isFirstInGroup ? (isMe ? "rounded-tr-2xl" : "rounded-tl-2xl") : ""
+                              } ${
+                                isLastInGroup ? (isMe ? "rounded-br-2xl" : "rounded-bl-2xl") : ""
+                              }`}
+                            >
+                              <p className="text-sm break-words leading-relaxed">{message.content}</p>
+                              <div className="flex items-center gap-1 justify-end mt-1">
+                                <p className={`text-[10px] sm:text-xs ${
+                                  isMe ? "text-primary-foreground/70" : "text-muted-foreground"
                                 }`}>
-                                {getMessageTime(message.createdAt)}
-                              </p>
+                                  {getMessageTime(message.createdAt)}
+                                </p>
+                                {isMe && (
+                                  <span className="flex items-center">
+                                    {message.read ? (
+                                      <CheckCheck className={`w-3.5 h-3.5 ${
+                                        message.readAt ? "text-blue-400" : "text-primary-foreground/70"
+                                      }`} />
+                                    ) : message.delivered ? (
+                                      <CheckCheck className="w-3.5 h-3.5 text-primary-foreground/70" />
+                                    ) : (
+                                      <Check className="w-3.5 h-3.5 text-primary-foreground/70" />
+                                    )}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
                           {isMe && (
@@ -486,7 +622,7 @@ export function ChatDialog({
                               </DropdownMenuContent>
                             </DropdownMenu>
                           )}
-                          {!isMe && (
+                          {!isMe && showAvatar && (
                             <Avatar className="w-6 h-6 sm:w-8 sm:h-8 flex-shrink-0">
                               <AvatarImage src={message.sender.avatar} />
                               <AvatarFallback className="bg-primary/20 text-primary text-[10px] sm:text-xs">
@@ -494,10 +630,25 @@ export function ChatDialog({
                               </AvatarFallback>
                             </Avatar>
                           )}
+                          {!isMe && !showAvatar && (
+                            <div className="w-6 sm:w-8" />
+                          )}
                         </div>
                       </div>
                     );
                   })}
+                  {typingUsers.size > 0 && (
+                    <div className="flex items-center gap-2 px-4 py-2">
+                      <div className="flex items-center gap-1 px-3 py-2 bg-muted rounded-full w-fit">
+                        <div className="flex gap-1">
+                          <div className="w-2 h-2 bg-primary rounded-full animate-bounce [animation-delay:0ms]" />
+                          <div className="w-2 h-2 bg-primary rounded-full animate-bounce [animation-delay:150ms]" />
+                          <div className="w-2 h-2 bg-primary rounded-full animate-bounce [animation-delay:300ms]" />
+                        </div>
+                        <span className="text-xs text-muted-foreground ml-1">typing...</span>
+                      </div>
+                    </div>
+                  )}
                   <div ref={messagesEndRef} />
                 </div>
               )}
@@ -509,7 +660,7 @@ export function ChatDialog({
                 <Input
                   placeholder="Type a message..."
                   value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
+                  onChange={handleMessageInputChange}
                   onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
                   disabled={!conversationId}
                   className="flex-1 h-9 sm:h-10 text-sm"

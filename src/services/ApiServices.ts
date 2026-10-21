@@ -563,7 +563,7 @@ export const notificationService = {
   },
 
   markAllAsRead: async (): Promise<ApiResponse> => {
-    return await api.patch('/notifications/mark-all-read');
+    return await api.patch('/notifications/read-all');
   },
 
   deleteNotification: async (notificationId: string): Promise<ApiResponse> => {

@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { MainLayout } from "@/components/layout/main-layout";
 import { AuthProvider } from "@/context/AuthContext";
+import { SocketProvider } from "@/context/SocketContext";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 
 // User pages
@@ -43,60 +44,62 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <PWAInstallPrompt />
-        <BrowserRouter>
-          <Routes>
-            {/* Auth Routes - No Sidebar */}
-            <Route path="/auth" element={<AuthLayout />}>
-              <Route path="login" element={<Login />} />
-              <Route path="forgot-password" element={<ForgotPassword />} />
-              <Route path="otp-verification" element={<OTPVerification />} />
-              <Route path="reset-password" element={<ResetPassword />} />
-            </Route>
+      <SocketProvider>
+        <TooltipProvider>
+          <Toaster />
+          <PWAInstallPrompt />
+          <BrowserRouter>
+            <Routes>
+              {/* Auth Routes - No Sidebar */}
+              <Route path="/auth" element={<AuthLayout />}>
+                <Route path="login" element={<Login />} />
+                <Route path="forgot-password" element={<ForgotPassword />} />
+                <Route path="otp-verification" element={<OTPVerification />} />
+                <Route path="reset-password" element={<ResetPassword />} />
+              </Route>
 
-            {/* Protected User Routes - With Sidebar */}
-            <Route path="/" element={
-              <ProtectedRoute>
-                <MainLayout />
-              </ProtectedRoute>
-            }>
-              <Route index element={<Dashboard />} />
-              <Route path="alumni" element={<Alumni />} />
-              <Route path="events" element={<Events />} />
-              <Route path="jobs" element={<Jobs />} />
-              <Route path="jobs/post" element={<PostJob />} />
-              <Route path="donations" element={<Donations />} />
-              <Route path="communications" element={<Communications />} />
-              <Route path="communications/post/:postId" element={<PostDetail />} />
-              <Route path="connections" element={<Connections />} />
-              <Route path="settings" element={<Settings />} />
-            </Route>
+              {/* Protected User Routes - With Sidebar */}
+              <Route path="/" element={
+                <ProtectedRoute>
+                  <MainLayout />
+                </ProtectedRoute>
+              }>
+                <Route index element={<Dashboard />} />
+                <Route path="alumni" element={<Alumni />} />
+                <Route path="events" element={<Events />} />
+                <Route path="jobs" element={<Jobs />} />
+                <Route path="jobs/post" element={<PostJob />} />
+                <Route path="donations" element={<Donations />} />
+                <Route path="communications" element={<Communications />} />
+                <Route path="communications/post/:postId" element={<PostDetail />} />
+                <Route path="connections" element={<Connections />} />
+                <Route path="settings" element={<Settings />} />
+              </Route>
 
-            {/* Protected Admin Routes - With Sidebar */}
-            <Route path="/admin" element={
-              <ProtectedRoute requireAdmin={true}>
-                <MainLayout />
-              </ProtectedRoute>
-            }>
-              <Route index element={<AdminDashboard />} />
-              <Route path="dashboard" element={<AdminDashboard />} />
-              <Route path="alumni" element={<AdminAlumni />} />
-              <Route path="events" element={<AdminEvents />} />
-              <Route path="jobs" element={<AdminJobs />} />
-              <Route path="donations" element={<AdminDonations />} />
-              <Route path="communications" element={<AdminCommunications />} />
-              <Route path="reports" element={<AdminReports />} />
-              {/* <Route path="analytics" element={<AdminAnalytics />} /> */}
-              <Route path="settings" element={<AdminSettings />} />
-            </Route>
+              {/* Protected Admin Routes - With Sidebar */}
+              <Route path="/admin" element={
+                <ProtectedRoute requireAdmin={true}>
+                  <MainLayout />
+                </ProtectedRoute>
+              }>
+                <Route index element={<AdminDashboard />} />
+                <Route path="dashboard" element={<AdminDashboard />} />
+                <Route path="alumni" element={<AdminAlumni />} />
+                <Route path="events" element={<AdminEvents />} />
+                <Route path="jobs" element={<AdminJobs />} />
+                <Route path="donations" element={<AdminDonations />} />
+                <Route path="communications" element={<AdminCommunications />} />
+                <Route path="reports" element={<AdminReports />} />
+                {/* <Route path="analytics" element={<AdminAnalytics />} /> */}
+                <Route path="settings" element={<AdminSettings />} />
+              </Route>
 
-            {/* Catch-all route */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
+              {/* Catch-all route */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </SocketProvider>
     </AuthProvider>
   </QueryClientProvider>
 );

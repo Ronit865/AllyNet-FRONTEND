@@ -1,4 +1,4 @@
-import { Search, Bell, User, LogOut, MessageCircle, Calendar, Heart, UserPlus, MessageSquare } from "lucide-react";
+import { Search, Bell, User, LogOut, MessagesSquare, Calendar, Heart, UserPlus, MessageSquare } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -234,7 +234,7 @@ export function AppHeader() {
                 setChatDialogOpen(true);
               }}
             >
-              <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5" />
+              <MessagesSquare className="w-4 h-4 sm:w-5 sm:h-5" />
               {unreadChatsCount > 0 && (
                 <span className="absolute -top-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 bg-primary rounded-full flex items-center justify-center">
                   <span className="text-[10px] sm:text-xs text-primary-foreground font-medium">
