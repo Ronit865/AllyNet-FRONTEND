@@ -5,7 +5,6 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { MainLayout } from "@/components/layout/main-layout";
 import { AuthProvider } from "@/context/AuthContext";
 import { SocketProvider } from "@/context/SocketContext";
-import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 
 // User pages
 import Dashboard from "./pages/Dashboard";
@@ -70,7 +69,6 @@ const App = () => (
               },
             }}
           />
-          <PWAInstallPrompt />
           <BrowserRouter>
             <Routes>
               {/* Auth Routes */}

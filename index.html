@@ -5,22 +5,7 @@
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
-    <!-- PWA Meta Tags -->
-    <meta name="theme-color" content="#3b6fe8" />
     <meta name="description" content="Connect with alumni, explore events, find job opportunities, and stay engaged with your alma mater community." />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-title" content="AllyNet" />
-    <meta name="mobile-web-app-capable" content="yes" />
-    
-    <!-- PWA Manifest -->
-    <link rel="manifest" href="/manifest.json" />
-    
-    <!-- Apple Touch Icons -->
-    <link rel="apple-touch-icon" href="/ANlogo.png" />
-    <link rel="apple-touch-icon" sizes="152x152" href="/ANlogo.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/ANlogo.png" />
-    <link rel="apple-touch-icon" sizes="167x167" href="/ANlogo.png" />
 
     <!-- Google Fonts: Plus Jakarta Sans + IBM Plex Sans + JetBrains Mono -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -154,33 +139,13 @@
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
 
-    <!-- Service Worker Registration -->
+    <!-- Remove service workers from previous PWA versions -->
     <script>
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', function() {
-          navigator.serviceWorker.register('/service-worker.js')
-            .then(function(registration) {
-              // Force update check on load
-              registration.update();
-              
-              // Check for updates periodically
-              setInterval(() => {
-                registration.update();
-              }, 30000); // Check every 30 seconds
-              
-              // Auto-refresh on new version
-              registration.addEventListener('updatefound', () => {
-                const newWorker = registration.installing;
-                if (newWorker) {
-                  newWorker.addEventListener('statechange', () => {
-                    if (newWorker.state === 'activated') {
-                      window.location.reload();
-                    }
-                  });
-                }
-              });
-            })
-            .catch(function() {});
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          registrations.forEach(function(registration) {
+            registration.unregister();
+          });
         });
       }
     </script>

@@ -71,11 +71,12 @@ export function ChatDialog({
   const [conversationId, setConversationId] = useState(initialConversationId);
   const [participant, setParticipant] = useState({ name: participantName, avatar: participantAvatar, _id: userId });
   const [loading, setLoading] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showConversationList, setShowConversationList] = useState(!initialConversationId && !userId);
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
   const [typingTimeout, setTypingTimeout] = useState<NodeJS.Timeout | null>(null);
-  const { socket, onlineUsers } = useSocket();
+  const { socket, onlineUsers, isConnected } = useSocket();
   const isParticipantOnline = useOnlineStatus(participant._id);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -318,7 +319,7 @@ export function ChatDialog({
   };
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !conversationId) return;
+    if (!newMessage.trim() || !conversationId || isSending) return;
 
     // Stop typing indicator
     if (socket && typingTimeout) {
@@ -353,7 +354,7 @@ export function ChatDialog({
     // Immediately update UI
     setMessages(prev => [...prev, optimisticMessage]);
     setNewMessage("");
-    // Scroll handled by useEffect
+    setIsSending(true);
 
     // Send to API in background
     try {
@@ -369,6 +370,8 @@ export function ChatDialog({
     } catch (error: any) {
       setMessages(prev => prev.filter(m => m._id !== optimisticMessage._id));
       toast.error("Failed to send message", { description: error.response?.data?.message });
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -497,7 +500,7 @@ export function ChatDialog({
         ) : (
           <>
             {/* ── Chat Header ── */}
-            <div className="flex items-center gap-3 px-4 py-3 border-b flex-shrink-0 bg-card">
+            <div className="flex items-center gap-3 px-4 py-3 pr-16 border-b flex-shrink-0 bg-card">
               <Button variant="ghost" size="icon" onClick={handleBackToList} className="h-8 w-8 flex-shrink-0 -ml-1">
                 <ArrowLeft className="w-4 h-4" />
               </Button>
@@ -513,8 +516,20 @@ export function ChatDialog({
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold truncate leading-none">{participant.name || 'Chat'}</p>
                 <p className="text-[11px] text-muted-foreground mt-0.5">
-                  {isParticipantOnline ? <span className="text-emerald-500 font-medium">Online</span> : 'Offline'}
+                    {isParticipantOnline ? (
+                      <span className="text-emerald-500 font-medium">Online</span>
+                    ) : (
+                      'Offline'
+                    )}
                 </p>
+              </div>
+              <div
+                className="flex items-center gap-1.5 text-[10px] text-muted-foreground"
+                aria-live="polite"
+                title={isConnected ? "Real-time connection active" : "Connecting to real-time updates"}
+              >
+                <span className={`h-1.5 w-1.5 rounded-full ${isConnected ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'}`} />
+                <span className="hidden sm:inline">{isConnected ? 'Live' : 'Connecting'}</span>
               </div>
             </div>
 
@@ -643,6 +658,24 @@ export function ChatDialog({
 
             {/* ── Input footer ── */}
             <div className="px-4 py-3 border-t bg-card flex-shrink-0">
+              {(loading || isSending) && (
+                <div
+                  className="flex items-center gap-2 mb-2 text-[11px] text-muted-foreground animate-in fade-in slide-in-from-bottom-1"
+                  aria-live="polite"
+                >
+                  <Loader2 className="w-3 h-3 animate-spin text-primary" />
+                  <span>{isSending ? 'Sending message…' : 'Loading conversation…'}</span>
+                  <span className="flex gap-0.5" aria-hidden="true">
+                    {[0, 120, 240].map(delay => (
+                      <span
+                        key={delay}
+                        className="h-1 w-1 rounded-full bg-primary/60 animate-bounce"
+                        style={{ animationDelay: `${delay}ms` }}
+                      />
+                    ))}
+                  </span>
+                </div>
+              )}
               <div className="flex items-center gap-2">
                 <Input
                   placeholder="Message…"
@@ -654,11 +687,16 @@ export function ChatDialog({
                 />
                 <Button
                   onClick={handleSendMessage}
-                  disabled={!newMessage.trim() || !conversationId}
+                  disabled={!newMessage.trim() || !conversationId || isSending}
                   size="icon"
                   className="h-9 w-9 flex-shrink-0"
+                  aria-label={isSending ? "Sending message" : "Send message"}
                 >
-                  <Send className="w-3.5 h-3.5" />
+                  {isSending ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Send className="w-3.5 h-3.5" />
+                  )}
                 </Button>
               </div>
             </div>
