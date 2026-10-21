@@ -6,6 +6,14 @@ const api = axios.create({
   timeout: 60000,
 });
 
+const refreshClient = axios.create({
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000/api",
+  withCredentials: true,
+  timeout: 60000,
+});
+
+let refreshPromise: Promise<void> | null = null;
+
 // Response interceptor to handle your ApiResponse and ApiError format
 api.interceptors.response.use(
   (response) => {
@@ -35,21 +43,24 @@ api.interceptors.response.use(
         originalRequest._retry = true;
 
         try {
-          const refreshResponse = await axios.post(
-            `${api.defaults.baseURL}/refresh-token`,
-            { withCredentials: true }
-          );
+          refreshPromise ??= refreshClient
+            .post('/refresh-token')
+            .then((refreshResponse) => {
+              if (!refreshResponse.data?.success) {
+                throw apiError;
+              }
+            })
+            .finally(() => {
+              refreshPromise = null;
+            });
 
-          if (refreshResponse.data?.success) {
-            return api(originalRequest);
-          } else {
-            localStorage.clear();
-            window.location.href = '/auth/login';
-            return Promise.reject(apiError);
-          }
+          await refreshPromise;
+          return api(originalRequest);
         } catch (refreshError) {
           localStorage.clear();
-          window.location.href = '/auth/login';
+          if (window.location.pathname !== '/auth/login') {
+            window.location.href = '/auth/login';
+          }
           return Promise.reject(refreshError);
         }
       }
