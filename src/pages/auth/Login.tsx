@@ -69,8 +69,9 @@ export const Login = () => {
     } catch (error: any) {
       const apiError = handleApiError(error);
 
-      setLoginError("Invalid email or password");
-      toast.error("Invalid credentials", { description: "Please check your email and password." });
+      const message = apiError?.message || "Unable to sign in";
+      setLoginError(message);
+      toast.error("Sign-in failed", { description: message });
     } finally {
       setIsLoading(false);
     }

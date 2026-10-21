@@ -6,7 +6,7 @@ import {
   Users, Calendar, IndianRupee, TrendingUp, UserCheck, Mail, Award,
   ArrowUpRight, Loader2, GraduationCap, Briefcase, ArrowRight,
   Activity, Clock, ChevronRight, Zap, MessageSquare, BarChart2,
-  UserPlus, DollarSign
+  UserPlus, DollarSign, RefreshCw
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { adminService, eventService, donationService, jobService, handleApiError } from "@/services/ApiServices";
@@ -33,6 +33,8 @@ export function Dashboard() {
   const [recentDonors, setRecentDonors] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const navigate = useNavigate();
 
   const formatCurrency = (amount: number) => {
@@ -209,6 +211,7 @@ export function Dashboard() {
 
         activities.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
         setRecentActivities(activities.slice(0, 6));
+        setLastUpdated(new Date());
 
       } catch (error: any) {
         setError('Failed to load dashboard data. Please refresh the page.');
@@ -218,7 +221,7 @@ export function Dashboard() {
     };
 
     fetchDashboardData();
-  }, []);
+  }, [refreshKey]);
 
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length && payload[0]?.payload) {
@@ -353,17 +356,57 @@ export function Dashboard() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">
-            Dashboard
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Overview of your alumni network
-          </p>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">Dashboard</h1>
+            <Badge variant="outline" className="gap-1.5 rounded-full text-[10px] font-medium">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Live data
+            </Badge>
+          </div>
+          <p className="text-muted-foreground mt-1">Overview of your alumni network</p>
         </div>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Clock className="w-4 h-4" />
-          <span>Last updated: {new Date().toLocaleTimeString()}</span>
+        <div className="flex items-center gap-3">
+          <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground">
+            <Clock className="w-3.5 h-3.5" />
+            <span>{lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString()}` : 'Loading live data'}</span>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setRefreshKey(value => value + 1)}
+            disabled={loading}
+            className="gap-2"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
         </div>
+      </div>
+
+      {/* Dashboard shell toolbar */}
+      <div className="flex flex-col gap-3 rounded-2xl border border-border/60 bg-card/70 p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-1 rounded-lg bg-muted/60 p-1">
+          <span className="rounded-md bg-background px-3 py-1.5 text-xs font-semibold text-foreground shadow-sm">
+            Overview
+          </span>
+          <button
+            type="button"
+            onClick={() => navigate('/admin/alumni')}
+            className="rounded-md px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-background/70 hover:text-foreground"
+          >
+            People
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/admin/reports')}
+            className="rounded-md px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-background/70 hover:text-foreground"
+          >
+            Reports
+          </button>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Metrics are loaded from the current admin APIs
+        </p>
       </div>
 
       {/* Stats Grid */}
@@ -703,4 +746,3 @@ export function Dashboard() {
     </div>
   );
 }
-
