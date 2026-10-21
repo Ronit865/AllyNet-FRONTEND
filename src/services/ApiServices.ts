@@ -20,15 +20,6 @@ export const authService = {
   login: async (credentials: { email: string; password: string }): Promise<ApiResponse> => {
     const response = await api.post('/login', credentials);
 
-    // Store tokens with timestamp for session tracking
-    if (response.data?.accessToken) {
-      localStorage.setItem('accessToken', response.data.accessToken);
-      localStorage.setItem('tokenTimestamp', Date.now().toString());
-    }
-    if (response.data?.refreshToken) {
-      localStorage.setItem('refreshToken', response.data.refreshToken);
-    }
-
     // Store userType
     if (response.data?.userType) {
       localStorage.setItem('userType', response.data.userType);
@@ -49,8 +40,8 @@ export const authService = {
     return await api.post('/verify-otp', { email, otp });
   },
 
-  refreshAccessToken: async (refreshToken: string): Promise<ApiResponse> => {
-    return await api.post('/refresh-token', { token: refreshToken });
+  refreshAccessToken: async (): Promise<ApiResponse> => {
+    return await api.post('/refresh-token');
   },
 
   resetPassword: async (email: string, newPassword: string, otp: string): Promise<ApiResponse> => {

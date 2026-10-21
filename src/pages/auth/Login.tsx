@@ -50,11 +50,6 @@ export const Login = () => {
       if (response.success) {
         const successData = handleApiSuccess(response);
 
-        // Store tokens
-        if (response.data?.accessToken) {
-          localStorage.setItem('accessToken', response.data.accessToken);
-        }
-
         // Update AuthContext with user data
         login(response.data);
 
@@ -62,7 +57,7 @@ export const Login = () => {
 
         const from = location.state?.from?.pathname;
         const role = response.data?.user?.role;
-        const isAdmin = role === 'admin' || role === 'superadmin';
+        const isAdmin = ['admin', 'superadmin', 'moderator'].includes(role?.toLowerCase() ?? '');
         const userType = response.data?.userType || (isAdmin ? 'admin' : 'user');
 
         if (userType === 'admin') {

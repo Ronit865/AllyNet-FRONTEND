@@ -6,21 +6,6 @@ const api = axios.create({
   timeout: 60000,
 });
 
-// Request interceptor to add auth token
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('accessToken');
-
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
 // Response interceptor to handle your ApiResponse and ApiError format
 api.interceptors.response.use(
   (response) => {
@@ -50,34 +35,12 @@ api.interceptors.response.use(
         originalRequest._retry = true;
 
         try {
-          const refreshToken = localStorage.getItem('refreshToken');
-
-          if (!refreshToken) {
-            localStorage.clear();
-            window.location.href = '/auth/login';
-            return Promise.reject(apiError);
-          }
-
           const refreshResponse = await axios.post(
             `${api.defaults.baseURL}/refresh-token`,
-            { refreshToken },
             { withCredentials: true }
           );
 
-          // Check for new tokens in response
-          const responseData = refreshResponse.data?.data || refreshResponse.data;
-          
-          if (refreshResponse.data?.success && responseData?.accessToken) {
-            const newAccessToken = responseData.accessToken;
-            localStorage.setItem('accessToken', newAccessToken);
-            
-            // Also store new refresh token if provided (token rotation)
-            if (responseData.refreshToken) {
-              localStorage.setItem('refreshToken', responseData.refreshToken);
-            }
-
-            originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-
+          if (refreshResponse.data?.success) {
             return api(originalRequest);
           } else {
             localStorage.clear();

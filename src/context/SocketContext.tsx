@@ -31,14 +31,11 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       return;
     }
 
-    const accessToken = localStorage.getItem('accessToken');
-    if (!accessToken) return;
-
     const SERVER_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
 
     // Create socket connection
     const newSocket = io(SERVER_URL, {
-      auth: { token: accessToken },
+      withCredentials: true,
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionAttempts: 5,

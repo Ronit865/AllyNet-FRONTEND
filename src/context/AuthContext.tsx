@@ -21,8 +21,12 @@ interface Admin {
   name: string;
   _id: string;
   email: string;
+  role?: string;
   avatar?: string;
 }
+
+const isAdminRole = (role?: string) =>
+  ['admin', 'superadmin', 'moderator'].includes(role?.toLowerCase() ?? '');
 
 interface AuthContextType {
   user: User | null;
@@ -48,10 +52,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     const initializeAuth = async () => {
-      const token = localStorage.getItem('accessToken');
       const storedUserType = localStorage.getItem('userType') as 'user' | 'admin' | null;
 
-      if (token && storedUserType) {
+      if (storedUserType) {
         setUserType(storedUserType);
 
         // Load cached data immediately
@@ -183,19 +186,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const login = (userData: any) => {
-    const responseUserType = userData.userType || (userData.user?.role === 'admin' ? 'admin' : 'user');
+    const responseUserType = userData.userType ||
+      (isAdminRole(userData.user?.role) ? 'admin' : 'user');
     const responseUser = userData.user;
     const responseAdmin = userData.admin;
 
     localStorage.setItem('userType', responseUserType);
     setUserType(responseUserType as 'user' | 'admin');
-
-    if (userData.accessToken) {
-      localStorage.setItem('accessToken', userData.accessToken);
-    }
-    if (userData.refreshToken) {
-      localStorage.setItem('refreshToken', userData.refreshToken);
-    }
 
     if (responseUserType === 'admin') {
       const adminData = responseAdmin || userData;
@@ -224,8 +221,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setAdmin(null);
     setUserType(null);
     setIsInitialized(false);
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
     localStorage.removeItem('userType');
     localStorage.removeItem('cachedUserData');
     localStorage.removeItem('cachedAdminData');
