@@ -1,4 +1,4 @@
-import {
+﻿import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -39,10 +39,10 @@ export function DeleteConfirmationDialog({
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="sm:max-w-md bg-background border-border/50 rounded-2xl">
+      <AlertDialogContent className="sm:max-w-md bg-background border-border/50 rounded-lg">
         <AlertDialogHeader className="space-y-4">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-rose-500/10 dark:bg-rose-500/20">
-            <AlertTriangle className="h-7 w-7 text-rose-500" />
+            <AlertTriangle className="h-7 w-7 text-muted-foreground" />
           </div>
           <AlertDialogTitle className="text-center text-xl font-semibold">
             {title}
@@ -54,7 +54,7 @@ export function DeleteConfirmationDialog({
         <AlertDialogFooter className="flex-col gap-2 sm:flex-row sm:gap-2 mt-4">
           <AlertDialogCancel
             disabled={isLoading}
-            className="w-full sm:w-auto rounded-xl border-border/50 hover:bg-muted/50"
+            className="w-full sm:w-auto rounded-lg border-border/50 hover:bg-muted/50"
           >
             {cancelText}
           </AlertDialogCancel>
@@ -64,7 +64,7 @@ export function DeleteConfirmationDialog({
               onConfirm();
             }}
             disabled={isLoading}
-            className="w-full sm:w-auto rounded-xl bg-rose-500 text-white hover:bg-rose-600 dark:bg-rose-600 dark:hover:bg-rose-700"
+            className="w-full sm:w-auto rounded-lg bg-rose-500 text-white hover:bg-rose-600 dark:bg-rose-600 dark:hover:bg-rose-700"
           >
             {isLoading ? (
               <>

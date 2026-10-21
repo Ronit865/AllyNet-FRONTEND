@@ -1,11 +1,12 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { InfoTag } from "@/components/ui/InfoTag";
 import { jobService } from "@/services/ApiServices";
 import PostJobDialog from "@/components/PostJobDialog";
@@ -32,16 +33,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+
 
 interface Job {
   _id: string;
@@ -74,7 +66,7 @@ export default function Jobs() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [jobDetailsOpen, setJobDetailsOpen] = useState(false);
   const [jobDetailsData, setJobDetailsData] = useState<Job | null>(null);
-  const { toast } = useToast();
+  const { confirm, Dialog: ConfirmDialogEl } = useConfirm();
 
   // Get current user ID from localStorage
   useEffect(() => {
@@ -131,11 +123,7 @@ export default function Jobs() {
     },
     onSuccess: (response) => {
       if (response.success) {
-        toast({
-          title: "Success",
-          description: "Application submitted successfully!",
-          variant: "success",
-        });
+        toast.success("Application submitted!", { description: "Your application has been submitted successfully." });
       } else {
         throw new Error(response.message);
       }
@@ -144,11 +132,7 @@ export default function Jobs() {
       if (context?.previousJobs) {
         queryClient.setQueryData([CACHE_KEYS.USER_JOBS], context.previousJobs);
       }
-      toast({
-        title: "Error",
-        description: error.message || "Failed to apply for job",
-        variant: "destructive",
-      });
+      toast.error("Failed to apply", { description: error.message || "Please try again." });
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: [CACHE_KEYS.USER_JOBS] });
@@ -181,11 +165,7 @@ export default function Jobs() {
     },
     onSuccess: (response) => {
       if (response.success) {
-        toast({
-          title: "Success",
-          description: "Application withdrawn successfully!",
-          variant: "success",
-        });
+        toast.success("Application withdrawn", { description: "Your application has been withdrawn." });
       } else {
         throw new Error(response.message);
       }
@@ -194,11 +174,7 @@ export default function Jobs() {
       if (context?.previousJobs) {
         queryClient.setQueryData([CACHE_KEYS.USER_JOBS], context.previousJobs);
       }
-      toast({
-        title: "Error",
-        description: error.message || "Failed to withdraw application",
-        variant: "destructive",
-      });
+      toast.error("Failed to withdraw", { description: error.message || "Please try again." });
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: [CACHE_KEYS.USER_JOBS] });
@@ -207,26 +183,24 @@ export default function Jobs() {
 
   const handleApply = (jobId: string) => {
     if (!currentUserId) {
-      toast({
-        title: "Error",
-        description: "Please log in to apply for jobs",
-        variant: "destructive",
-      });
+      toast.error("Please log in to apply for jobs");
       return;
     }
     applyMutation.mutate(jobId);
   };
 
-  const handleUnapply = (jobId: string) => {
+  const handleUnapply = async (jobId: string) => {
     if (!currentUserId) {
-      toast({
-        title: "Error",
-        description: "Please log in to unapply",
-        variant: "destructive",
-      });
+      toast.error("Please log in first");
       return;
     }
-    unapplyMutation.mutate(jobId);
+    const ok = await confirm({
+      title: "Withdraw Application?",
+      description: "Are you sure you want to withdraw your application for this job? You can re-apply later.",
+      confirmText: "Withdraw",
+      variant: "warning",
+    });
+    if (ok) unapplyMutation.mutate(jobId);
   };
 
   const handleEdit = (job: Job) => {
@@ -234,42 +208,25 @@ export default function Jobs() {
     setEditDialogOpen(true);
   };
 
-  const handleDelete = (jobId: string) => {
-    setJobToDelete(jobId);
-    setDeleteDialogOpen(true);
-  };
-
-  const confirmDelete = async () => {
-    if (!jobToDelete) return;
-
+  const handleDelete = async (jobId: string, jobTitle?: string) => {
+    const ok = await confirm({
+      title: "Delete Job Posting?",
+      itemName: jobTitle,
+      description: `This will permanently remove the job posting "${jobTitle || 'this job'}". Applicants will no longer see it.`,
+      confirmText: "Delete Job",
+      variant: "danger",
+    });
+    if (!ok) return;
     try {
-      setDeleting(true);
-      const response = await jobService.deleteJob(jobToDelete);
-
+      const response = await jobService.deleteJob(jobId);
       if (response.success) {
-        toast({
-          title: "Success",
-          description: "Job deleted successfully",
-          variant: "success",
-        });
+        toast.success("Job deleted", { description: "The job posting has been removed." });
         refetchPostedJobs();
       } else {
-        toast({
-          title: "Error",
-          description: response.message || "Failed to delete job",
-          variant: "destructive",
-        });
+        toast.error("Failed to delete job", { description: response.message });
       }
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to delete job",
-        variant: "destructive",
-      });
-    } finally {
-      setDeleting(false);
-      setDeleteDialogOpen(false);
-      setJobToDelete(null);
+      toast.error("Failed to delete job", { description: error.message });
     }
   };
 
@@ -285,19 +242,11 @@ export default function Jobs() {
         const applicantsData = Array.isArray(response.data) ? response.data : [];
         setApplicants(applicantsData);
       } else {
-        toast({
-          title: "Error",
-          description: response.message || "Failed to fetch applicants",
-          variant: "destructive",
-        });
+        toast.error("Failed to load applicants", { description: response.message });
         setApplicants([]);
       }
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to load applicants",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: error.message || "Failed to load applicants" });
       setApplicants([]);
     } finally {
       setLoadingApplicants(false);
@@ -334,7 +283,7 @@ export default function Jobs() {
       {[0, 1, 2, 3, 4, 5].map((i) => (
         <div
           key={i}
-          className="rounded-2xl bg-card border border-border/50 p-4 sm:p-5 space-y-3 sm:space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300"
+          className="rounded-2xl bg-card border border-border/50 p-4 sm:p-5 space-y-3 sm:space-y-4 animate-in fade-in slide-in- duration-300"
           style={{ animationDelay: `${i * 40}ms` }}
         >
           <div className="flex items-start justify-between">
@@ -385,7 +334,7 @@ export default function Jobs() {
     return (
       <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         {jobs.map((job) => (
-          <Card key={job._id} className="overflow-hidden border-border/30 bg-card flex flex-col h-full group hover:shadow-lg transition-all duration-300">
+          <Card key={job._id} className="overflow-hidden border-border/30 bg-card flex flex-col h-full group hover:shadow-lg transition-colors duration-100">
             <CardHeader className="pb-2 pt-5 px-5">
               <div className="flex justify-between items-start gap-3">
                 <CardTitle className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2 flex-1 font-sans">
@@ -426,7 +375,7 @@ export default function Jobs() {
                 )}
                 {job.jobType && (
                   <div className="flex items-center gap-2">
-                    <Briefcase className="h-4 w-4 text-purple-500 flex-shrink-0" />
+                    <Briefcase className="h-4 w-4 text-blue-500 flex-shrink-0" />
                     <span className="text-foreground font-medium">{job.jobType}</span>
                   </div>
                 )}
@@ -616,7 +565,7 @@ export default function Jobs() {
                       <Button
                         variant="destructive"
                         size="sm"
-                        onClick={() => handleDelete(job._id)}
+                        onClick={() => handleDelete(job._id, job.title)}
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -654,28 +603,7 @@ export default function Jobs() {
         } : undefined}
       />
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the job posting
-              and remove all applicant data.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmDelete}
-              disabled={deleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleting ? "Deleting..." : "Delete"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+
 
       {/* Applicants Dialog */}
       <Dialog open={applicantsDialogOpen} onOpenChange={setApplicantsDialogOpen}>
@@ -811,7 +739,7 @@ export default function Jobs() {
               {/* Action Buttons */}
               <div className="flex gap-3 pt-4">
                 <Button
-                  className={`flex-1 ${hasApplied(jobDetailsData) ? 'bg-gradient-to-r from-green-400 to-emerald-500 hover:from-green-500 hover:to-emerald-600 text-white font-semibold shadow-lg' : ''}`}
+                  className={`flex-1 ${hasApplied(jobDetailsData) ? ' hover: hover: text-white font-semibold shadow-lg' : ''}`}
                   onClick={() => {
                     if (hasApplied(jobDetailsData)) {
                       handleUnapply(jobDetailsData._id);
@@ -835,6 +763,12 @@ export default function Jobs() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Confirm Dialog (delete, withdraw) */}
+      {ConfirmDialogEl}
     </div>
   );
 }
+
+
+

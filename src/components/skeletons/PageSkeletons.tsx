@@ -1,4 +1,4 @@
-import { Skeleton } from "@/components/ui/skeleton";
+﻿import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 // Shimmer effect wrapper
@@ -10,7 +10,7 @@ const ShimmerWrapper = ({ children, className }: { children: React.ReactNode; cl
 
 // Stats Card Skeleton
 export const StatsCardSkeleton = ({ className, style }: { className?: string; style?: React.CSSProperties }) => (
-  <div className={cn("rounded-2xl p-4 sm:p-5 bg-card/50 border border-border/50", className)} style={style}>
+  <div className={cn("rounded-2xl p-4 sm:p-5 bg-card border border-border/50", className)} style={style}>
     <div className="flex items-center justify-between">
       <div className="space-y-3">
         <Skeleton className="h-3 w-20 bg-muted/60" />
@@ -24,7 +24,7 @@ export const StatsCardSkeleton = ({ className, style }: { className?: string; st
 
 // Card Skeleton (for events, jobs, donations)
 export const ContentCardSkeleton = ({ className, style }: { className?: string; style?: React.CSSProperties }) => (
-  <div className={cn("rounded-2xl p-5 bg-card/50 border border-border/50 space-y-4", className)} style={style}>
+  <div className={cn("rounded-2xl p-5 bg-card border border-border/50 space-y-4", className)} style={style}>
     <div className="flex items-start justify-between">
       <div className="space-y-2 flex-1">
         <Skeleton className="h-5 w-3/4 bg-muted/60" />
@@ -64,7 +64,7 @@ export const TableRowSkeleton = ({ columns = 6 }: { columns?: number }) => (
 
 // Table Skeleton
 export const TableSkeleton = ({ rows = 5, columns = 6 }: { rows?: number; columns?: number }) => (
-  <div className="rounded-2xl bg-card/50 border border-border/50 overflow-hidden">
+  <div className="rounded-2xl bg-card border border-border/50 overflow-hidden">
     <div className="bg-muted/30 p-4 border-b border-border/30">
       <div className="flex gap-4">
         {Array.from({ length: columns }).map((_, i) => (
@@ -105,7 +105,7 @@ export const DashboardSkeleton = () => (
     </div>
 
     {/* Quick Actions */}
-    <div className="rounded-2xl bg-card/50 border border-border/50 p-6 animate-in fade-in slide-in-from-bottom-2 duration-500" style={{ animationDelay: '300ms' }}>
+    <div className="rounded-2xl bg-card border border-border/50 p-6 animate-in fade-in slide-in-from-bottom-2 duration-500" style={{ animationDelay: '300ms' }}>
       <Skeleton className="h-5 w-32 mb-4 bg-muted/60" />
       <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
         {[0, 1, 2, 3, 4].map((i) => (
@@ -119,7 +119,7 @@ export const DashboardSkeleton = () => (
 
     {/* Main Grid */}
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div className="lg:col-span-2 rounded-2xl bg-card/50 border border-border/50 p-6 animate-in fade-in slide-in-from-bottom-2 duration-500" style={{ animationDelay: '400ms' }}>
+      <div className="lg:col-span-2 rounded-2xl bg-card border border-border/50 p-6 animate-in fade-in slide-in-from-bottom-2 duration-500" style={{ animationDelay: '400ms' }}>
         <Skeleton className="h-5 w-40 mb-4 bg-muted/60" />
         <div className="space-y-3">
           {[0, 1, 2, 3].map((i) => (
@@ -134,7 +134,7 @@ export const DashboardSkeleton = () => (
           ))}
         </div>
       </div>
-      <div className="rounded-2xl bg-card/50 border border-border/50 p-6 animate-in fade-in slide-in-from-bottom-2 duration-500" style={{ animationDelay: '500ms' }}>
+      <div className="rounded-2xl bg-card border border-border/50 p-6 animate-in fade-in slide-in-from-bottom-2 duration-500" style={{ animationDelay: '500ms' }}>
         <Skeleton className="h-5 w-36 mb-4 bg-muted/60" />
         <div className="space-y-3">
           {[0, 1, 2, 3, 4].map((i) => (
@@ -256,7 +256,7 @@ export const CommunicationsPageSkeleton = () => (
     {/* Campaign Cards */}
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-2 duration-500" style={{ animationDelay: '200ms' }}>
       {[0, 1, 2].map((i) => (
-        <div key={i} className="rounded-2xl bg-card/50 border border-border/50 p-6 space-y-4">
+        <div key={i} className="rounded-2xl bg-card border border-border/50 p-6 space-y-4">
           <div className="flex items-center gap-3">
             <Skeleton className="h-12 w-12 rounded-xl bg-muted/60" />
             <div className="space-y-2">
@@ -272,7 +272,7 @@ export const CommunicationsPageSkeleton = () => (
 
     {/* Email Compose */}
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in fade-in slide-in-from-bottom-2 duration-500" style={{ animationDelay: '300ms' }}>
-      <div className="rounded-2xl bg-card/50 border border-border/50 p-6 space-y-4">
+      <div className="rounded-2xl bg-card border border-border/50 p-6 space-y-4">
         <Skeleton className="h-6 w-40 bg-muted/60" />
         <Skeleton className="h-10 w-full rounded-lg bg-muted/60" />
         <Skeleton className="h-32 w-full rounded-lg bg-muted/60" />
@@ -283,7 +283,7 @@ export const CommunicationsPageSkeleton = () => (
         </div>
         <Skeleton className="h-10 w-32 rounded-lg bg-muted/60" />
       </div>
-      <div className="rounded-2xl bg-card/50 border border-border/50 p-6 space-y-4">
+      <div className="rounded-2xl bg-card border border-border/50 p-6 space-y-4">
         <Skeleton className="h-6 w-32 bg-muted/60" />
         <div className="space-y-3">
           {[0, 1, 2, 3, 4].map((i) => (

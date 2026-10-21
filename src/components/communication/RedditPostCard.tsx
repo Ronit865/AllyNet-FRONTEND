@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { MessageCircle, Share, Bookmark, MoreHorizontal, Trash2, Edit, Flag, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -30,7 +30,8 @@ import {
 } from "@/components/ui/select";
 import { VoteButtons } from "./VoteButtons";
 import { communicationService } from "@/services/ApiServices";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 interface RedditPostProps {
   post: any;
@@ -39,7 +40,7 @@ interface RedditPostProps {
 
 export function RedditPostCard({ post, onUpdate }: RedditPostProps) {
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const { confirm: confirmAction, Dialog: ConfirmDialogEl } = useConfirm();
   const [isSaved, setIsSaved] = useState(post.savedBy?.includes(localStorage.getItem('userId')) || false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editContent, setEditContent] = useState(post.content || "");
@@ -67,36 +68,30 @@ export function RedditPostCard({ post, onUpdate }: RedditPostProps) {
     const newSavedState = !isSaved;
     setIsSaved(newSavedState);
 
-    toast({ title: newSavedState ? "Post saved" : "Post unsaved", variant: "success" });
+    toast.success(newSavedState ? "Post saved" : "Removed from saved");
 
-    // Call API in background
     try {
       await communicationService.toggleSavePost(post._id);
     } catch (error: any) {
-      // Revert on error
       setIsSaved(!newSavedState);
-      toast({ title: "Error", description: error.message || "Failed to save post. Please try again.", variant: "destructive" });
+      toast.error("Failed to save post", { description: error.message });
     }
   };
 
   const handleDelete = async () => {
-    if (!confirm("Are you sure you want to delete this post?")) return;
-
-    // Immediately update UI for instant feedback
-    if (onUpdate) {
-      onUpdate();
-    }
-
-    toast({ title: "Post deleted successfully", variant: "success" });
-
-    // Call API in background
+    const ok = await confirmAction({
+      title: "Delete post?",
+      description: "This post will be permanently removed. This cannot be undone.",
+      confirmText: "Delete post",
+      variant: "danger",
+    });
+    if (!ok) return;
+    if (onUpdate) onUpdate();
+    toast.success("Post deleted");
     try {
       await communicationService.deletePost(post._id);
-    } catch (error: any) {
-      // Delete post error - refresh to restore
-      if (onUpdate) {
-        onUpdate(); // Refresh to restore if failed
-      }
+    } catch {
+      if (onUpdate) onUpdate();
     }
   };
 
@@ -108,7 +103,7 @@ export function RedditPostCard({ post, onUpdate }: RedditPostProps) {
 
   const submitReport = async () => {
     if (!reportReason) {
-      toast({ title: "Error", description: "Please select a reason for reporting", variant: "destructive" });
+      toast.error("Please select a reason");
       return;
     }
 
@@ -118,13 +113,13 @@ export function RedditPostCard({ post, onUpdate }: RedditPostProps) {
         reason: reportReason,
         description: reportDescription
       });
-      toast({ title: "Post reported", description: "We'll review this post", variant: "success" });
+      toast.success("Post reported", { description: "We'll review this post." });
       setReportDialogOpen(false);
     } catch (error: any) {
       if (error.response?.data?.message?.includes("already reported")) {
-        toast({ title: "Error", description: "You have already reported this post", variant: "destructive" });
+        toast.error("Already reported", { description: "You have already reported this post." });
       } else {
-        toast({ title: "Error", description: error.message || "Failed to submit report", variant: "destructive" });
+        toast.error("Failed to report", { description: error.message });
       }
     } finally {
       setIsReporting(false);
@@ -144,28 +139,28 @@ export function RedditPostCard({ post, onUpdate }: RedditPostProps) {
       } catch (error) {
         // User cancelled or share failed, fallback to clipboard
         await navigator.clipboard.writeText(postUrl);
-        toast({ title: "Link copied to clipboard", variant: "success" });
+        toast.success("Link copied");
       }
     } else {
       await navigator.clipboard.writeText(postUrl);
-      toast({ title: "Link copied to clipboard", variant: "success" });
+      toast.success("Link copied");
     }
   };
 
   const handleEdit = async () => {
     if (!editContent.trim()) {
-      toast({ title: "Error", description: "Post content cannot be empty", variant: "destructive" });
+      toast.error("Post content cannot be empty");
       return;
     }
 
     setIsEditing(true);
     try {
       await communicationService.updatePost(post._id, { content: editContent });
-      toast({ title: "Post updated successfully", variant: "success" });
+      toast.success("Post updated");
       setEditDialogOpen(false);
       if (onUpdate) onUpdate();
     } catch (error: any) {
-      toast({ title: "Error", description: error.message || "Failed to update post", variant: "destructive" });
+      toast.error("Failed to update post", { description: error.message });
     } finally {
       setIsEditing(false);
     }
@@ -199,10 +194,10 @@ export function RedditPostCard({ post, onUpdate }: RedditPostProps) {
 
   return (
     <Card
-      className="group relative overflow-hidden rounded-3xl border border-border/60 bg-gradient-to-br from-card to-muted/20 p-0 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-primary/20 cursor-pointer"
+      className="group relative overflow-hidden rounded-3xl border border-border/60 from-card to-muted/20 p-0 transition-colors duration-100 hover:shadow-lg hover:border-primary/20 cursor-pointer"
       onClick={handleCardClick}
     >
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+      <div className="absolute inset-0 from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 
       <div className="flex gap-0 relative">
         {/* Vote Section */}
@@ -223,7 +218,7 @@ export function RedditPostCard({ post, onUpdate }: RedditPostProps) {
               <div className="relative">
                 <Avatar className="w-9 h-9 sm:w-10 sm:h-10 border-2 border-background ring-2 ring-border/50">
                   <AvatarImage src={post.author?.avatar} className="object-cover" />
-                  <AvatarFallback className="bg-gradient-to-br from-primary/10 to-primary/20 text-primary font-semibold text-xs sm:text-sm">
+                  <AvatarFallback className=" from-primary/10 to-primary/20 text-primary font-semibold text-xs sm:text-sm">
                     {getUserInitials(post.author?.name || 'User')}
                   </AvatarFallback>
                 </Avatar>
@@ -249,7 +244,7 @@ export function RedditPostCard({ post, onUpdate }: RedditPostProps) {
             </div>
 
             <div className="flex items-center gap-2">
-              <Badge variant="outline" className="hidden sm:inline-flex text-[10px] px-2 py-0.5 h-6 bg-background/50 backdrop-blur-sm">
+              <Badge variant="outline" className="hidden sm:inline-flex text-[10px] px-2 py-0.5 h-6 bg-background/50">
                 {post.category}
               </Badge>
               <DropdownMenu>
@@ -294,7 +289,7 @@ export function RedditPostCard({ post, onUpdate }: RedditPostProps) {
           {/* Message Content */}
           <div className="mb-4 pl-1">
             <div className="sm:hidden mb-2">
-              <Badge variant="outline" className="text-[10px] px-2 py-0.5 h-6 bg-background/50 backdrop-blur-sm">
+              <Badge variant="outline" className="text-[10px] px-2 py-0.5 h-6 bg-background/50">
                 {post.category}
               </Badge>
             </div>
@@ -427,7 +422,8 @@ export function RedditPostCard({ post, onUpdate }: RedditPostProps) {
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
+        </Dialog>
+      {ConfirmDialogEl}
     </Card>
   );
 }

@@ -1,4 +1,4 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+﻿import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useState, useEffect } from "react";
 import { donationService, handleApiError } from "@/services/ApiServices";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from 'sonner';
 
 // Keep the static data for stats (will be replaced with API data)
 // Removed static donationStats and recentDonations arrays - now using API data
@@ -80,7 +80,6 @@ export function Donations() {
     const [loadingStats, setLoadingStats] = useState(true);
     const [activePage, setActivePage] = useState(0);
     const [completedPage, setCompletedPage] = useState(0);
-    const { toast: toastHook } = useToast();
 
     // Edit Campaign State
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -147,27 +146,19 @@ export function Donations() {
                     setError(null);
                 } else {
                     setError(response.message || "Failed to fetch campaigns");
-                    toastHook({
-                        title: "Error",
-                        description: response.message || "Failed to fetch campaigns",
-                        variant: "destructive",
-                    });
+                    toast.error("Error", { description: response.message || "Failed to fetch campaigns" });
                 }
             } catch (err: any) {
                 const apiError = handleApiError(err);
                 setError(apiError.message || "An error occurred while fetching campaigns");
-                toastHook({
-                    title: "Error",
-                    description: apiError.message || "Failed to load campaigns",
-                    variant: "destructive",
-                });
+                toast.error("Error", { description: apiError.message || "Failed to load campaigns" });
             } finally {
                 setLoading(false);
             }
         };
 
         fetchCampaigns();
-    }, [toastHook]);
+    }, []);
 
     // Fetch donation stats and recent donors
     useEffect(() => {
@@ -323,7 +314,7 @@ export function Donations() {
             const response = await donationService.createCampaign(campaignData);
 
             if (response.success) {
-                toastHook({
+                toast({
                     title: "Campaign created",
                     description: "Campaign has been successfully created",
                     variant: "success",
@@ -343,19 +334,11 @@ export function Donations() {
                 // Refresh campaigns list
                 window.location.reload();
             } else {
-                toastHook({
-                    title: "Error",
-                    description: `Failed to create campaign: ${response.message}`,
-                    variant: "destructive",
-                });
+                toast.error("Error", { description: `Failed to create campaign: ${response.message}` });
             }
         } catch (err: any) {
             const errorInfo = handleApiError(err);
-            toastHook({
-                title: "Error",
-                description: `Failed to create campaign: ${errorInfo.message}`,
-                variant: "destructive",
-            });
+            toast.error("Error", { description: `Failed to create campaign: ${errorInfo.message}` });
         } finally {
             setIsCreating(false);
         }
@@ -392,20 +375,12 @@ export function Donations() {
                     setSelectedCampaignDonors([]);
                 }
             } else {
-                toastHook({
-                    title: "Error",
-                    description: "Unexpected response format from server",
-                    variant: "destructive",
-                });
+                toast.error("Error", { description: "Unexpected response format from server" });
                 setSelectedCampaignDonors([]);
             }
         } catch (err: any) {
             const apiError = handleApiError(err);
-            toastHook({
-                title: "Error",
-                description: apiError.message || "Failed to load donors",
-                variant: "destructive",
-            });
+            toast.error("Error", { description: apiError.message || "Failed to load donors" });
             setSelectedCampaignDonors([]);
             console.error("Error fetching campaign donors:", err);
         } finally {
@@ -470,7 +445,7 @@ export function Donations() {
             };
 
             await donationService.updateCampaign(editingCampaign._id, campaignData);
-            toastHook({
+            toast({
                 title: "Campaign updated",
                 description: "Campaign has been successfully updated",
                 variant: "success",
@@ -481,11 +456,7 @@ export function Donations() {
             window.location.reload();
         } catch (err: any) {
             const errorInfo = handleApiError(err);
-            toastHook({
-                title: "Error",
-                description: `Failed to update campaign: ${errorInfo.message}`,
-                variant: "destructive",
-            });
+            toast.error("Error", { description: `Failed to update campaign: ${errorInfo.message}` });
         } finally {
             setIsEditingCampaign(false);
         }
@@ -494,7 +465,7 @@ export function Donations() {
     const handleDeleteCampaign = async (campaignId: string) => {
         try {
             await donationService.deleteCampaign(campaignId);
-            toastHook({
+            toast({
                 title: "Campaign deleted",
                 description: "Campaign has been successfully deleted",
                 variant: "success",
@@ -502,11 +473,7 @@ export function Donations() {
             window.location.reload();
         } catch (err: any) {
             const errorInfo = handleApiError(err);
-            toastHook({
-                title: "Error",
-                description: `Failed to delete campaign: ${errorInfo.message}`,
-                variant: "destructive",
-            });
+            toast.error("Error", { description: `Failed to delete campaign: ${errorInfo.message}` });
         }
     };
 
@@ -514,7 +481,7 @@ export function Donations() {
         return (
             <div className="space-y-6 animate-in fade-in duration-500">
                 {/* Header */}
-                <div className="flex flex-col sm:flex-row justify-between items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-500">
+                <div className="flex flex-col sm:flex-row justify-between items-start gap-3 animate-in fade-in slide-in- duration-500">
                     <div className="space-y-2">
                         <Skeleton className="h-8 w-56 bg-muted/60" />
                         <Skeleton className="h-4 w-80 bg-muted/60" />
@@ -523,11 +490,11 @@ export function Donations() {
                 </div>
 
                 {/* Stats Cards */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6 animate-in fade-in slide-in-from-bottom-2 duration-500" style={{ animationDelay: '100ms' }}>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6 animate-in fade-in slide-in- duration-500" style={{ animationDelay: '100ms' }}>
                     {[0, 1, 2, 3].map((i) => (
                         <div
                             key={i}
-                            className="rounded-2xl p-4 sm:p-5 bg-card/50 border border-border/50"
+                            className="rounded-2xl p-4 sm:p-5 bg-card border border-border/50"
                         >
                             <div className="flex items-center justify-between">
                                 <div className="space-y-3">
@@ -544,13 +511,13 @@ export function Donations() {
 
 
                 {/* Campaigns Grid */}
-                <div className="animate-in fade-in slide-in-from-bottom-2 duration-500" style={{ animationDelay: '200ms' }}>
+                <div className="animate-in fade-in slide-in- duration-500" style={{ animationDelay: '200ms' }}>
                     <Skeleton className="h-6 w-40 mb-4 bg-muted/60" />
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         {[0, 1, 2, 3, 4, 5].map((i) => (
                             <div
                                 key={i}
-                                className="rounded-2xl p-5 bg-card/50 border border-border/50 space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500"
+                                className="rounded-2xl p-5 bg-card border border-border/50 space-y-4 animate-in fade-in slide-in- duration-500"
                                 style={{ animationDelay: `${400 + i * 50}ms` }}
                             >
                                 <div className="flex items-start justify-between">
@@ -575,7 +542,7 @@ export function Donations() {
                 </div>
 
                 {/* Recent Donations Table */}
-                <div className="rounded-2xl bg-card/50 border border-border/50 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-500" style={{ animationDelay: '500ms' }}>
+                <div className="rounded-2xl bg-card border border-border/50 overflow-hidden animate-in fade-in slide-in- duration-500" style={{ animationDelay: '500ms' }}>
                     <div className="p-4 border-b border-border/30">
                         <Skeleton className="h-6 w-40 bg-muted/60" />
                     </div>
@@ -932,7 +899,7 @@ export function Donations() {
 
                 const CampaignCard = ({ campaign, index }: { campaign: Campaign; index: number }) => {
                     return (
-                        <Card key={`campaign-${campaign._id}`} className="overflow-hidden border-border/30 bg-card font-sans shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 flex flex-col h-full animate-fade-in" style={{ animationDelay: `${index * 100}ms` }}>
+                        <Card key={`campaign-${campaign._id}`} className="overflow-hidden border-border/30 bg-card font-sans shadow-sm hover:shadow-lg transition-colors duration-100 flex flex-col h-full animate-fade-in" style={{ animationDelay: `${index * 100}ms` }}>
                             <CardHeader className="pb-3 pt-5 px-5">
                                 <div className="flex justify-between items-start gap-2">
                                     <div className="flex-1 min-w-0">
@@ -976,7 +943,7 @@ export function Donations() {
                                         <span className="font-medium text-foreground">{getProgressPercentage(campaign.raised, campaign.goal)}%</span>
                                     </div>
                                     <div className="w-full bg-secondary rounded-full h-2">
-                                        <div className="bg-gradient-to-r from-primary to-primary/80 h-2 rounded-full transition-all duration-500" style={{ width: `${getProgressPercentage(campaign.raised, campaign.goal)}%` }} />
+                                        <div className=" from-primary to-primary/80 h-2 rounded-full transition-all duration-500" style={{ width: `${getProgressPercentage(campaign.raised, campaign.goal)}%` }} />
                                     </div>
                                 </div>
 
@@ -1012,7 +979,7 @@ export function Donations() {
                     <>
                         {/* Active Campaigns */}
                         <div>
-                            <div className="flex items-center gap-2 mb-4"><Target className="h-5 w-5 text-red-500" /><h2 className="text-xl font-semibold text-foreground">Active Donations ({activeCampaigns.length})</h2></div>
+                            <div className="flex items-center gap-2 mb-4"><Target className="h-5 w-5 text-muted-foreground" /><h2 className="text-xl font-semibold text-foreground">Active Donations ({activeCampaigns.length})</h2></div>
                             {activeCampaigns.length === 0 ? (
                                 <Card className="border-card-border/50"><CardContent className="pt-12 pb-12 text-center"><Target className="h-12 w-12 mx-auto text-muted-foreground mb-4" /><p className="text-muted-foreground">No active campaigns.</p></CardContent></Card>
                             ) : (
@@ -1022,7 +989,7 @@ export function Donations() {
 
                         {/* Completed Campaigns */}
                         <div>
-                            <div className="flex items-center gap-2 mb-4"><CheckCircle className="h-5 w-5 text-emerald-500" /><h2 className="text-xl font-semibold text-foreground">Completed Donations ({completedCampaigns.length})</h2></div>
+                            <div className="flex items-center gap-2 mb-4"><CheckCircle className="h-5 w-5 text-muted-foreground" /><h2 className="text-xl font-semibold text-foreground">Completed Donations ({completedCampaigns.length})</h2></div>
                             {completedCampaigns.length === 0 ? (
                                 <Card className="border-card-border/50"><CardContent className="pt-12 pb-12 text-center"><CheckCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" /><p className="text-muted-foreground">No completed campaigns yet.</p></CardContent></Card>
                             ) : (
@@ -1037,7 +1004,7 @@ export function Donations() {
             <Card className="bento-card gradient-surface border-card-border/50">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                        <Clock className="h-5 w-5 text-amber-500" />
+                        <Clock className="h-5 w-5 text-muted-foreground" />
                         Recent Donations
                     </CardTitle>
                     <CardDescription>
@@ -1183,8 +1150,8 @@ export function Donations() {
                 >
                     <DialogHeader className="pb-4 border-b border-card-border/20">
                         <div className="flex items-center gap-3">
-                            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
-                                <IndianRupee className="h-6 w-6 text-emerald-500" />
+                            <div className="h-12 w-12 rounded-xl from-primary/20 to-primary/10 flex items-center justify-center">
+                                <IndianRupee className="h-6 w-6 text-muted-foreground" />
                             </div>
                             <div>
                                 <DialogTitle className="text-xl font-semibold text-foreground">
@@ -1227,7 +1194,7 @@ export function Donations() {
                                             style={{ animationDelay: `${index * 50}ms` }}
                                         >
                                             <div className="flex items-center gap-4">
-                                                <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary/20 to-accent/50 flex items-center justify-center overflow-hidden flex-shrink-0 ring-2 ring-background shadow-sm">
+                                                <div className="h-12 w-12 rounded-xl from-primary/20 to-accent/50 flex items-center justify-center overflow-hidden flex-shrink-0 ring-2 ring-background shadow-sm">
                                                     {donor.avatar ? (
                                                         <img src={donor.avatar} alt={donor.name} className="h-full w-full object-cover" />
                                                     ) : (
@@ -1272,8 +1239,8 @@ export function Donations() {
                 <DialogContent className="sm:max-w-[500px] bento-card gradient-surface border-card-border/50" style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
                     <DialogHeader className="pb-4 border-b border-card-border/20">
                         <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
-                                <Edit className="h-5 w-5 text-blue-500" />
+                            <div className="h-10 w-10 rounded-xl from-primary/20 to-primary/10 flex items-center justify-center">
+                                <Edit className="h-5 w-5 text-muted-foreground" />
                             </div>
                             <div>
                                 <DialogTitle className="text-xl font-semibold text-foreground">Edit Campaign</DialogTitle>
@@ -1380,3 +1347,4 @@ export function Donations() {
         </div>
     );
 }
+

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, MessageCircle, Share2, Bookmark, MoreHorizontal, Trash2, Edit, Flag, Share } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { communicationService } from "@/services/ApiServices";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from 'sonner';
 import { CommentCard } from "@/components/communication/CommentCard";
 import { VoteButtons } from "@/components/communication/VoteButtons";
 import { containsInappropriateContent } from "@/lib/contentFilter";
@@ -23,7 +23,6 @@ import { useAuth } from "@/context/AuthContext";
 export default function PostDetail() {
   const { postId } = useParams();
   const navigate = useNavigate();
-  const { toast } = useToast();
   const { user, admin } = useAuth(); // Get current user context
 
   const [post, setPost] = useState<any>(null);
@@ -49,11 +48,7 @@ export default function PostDetail() {
         setIsSaved(response.data.savedBy?.includes(localStorage.getItem('userId')) || false);
       }
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to fetch post",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: error.message || "Failed to fetch post" });
     }
   };
 
@@ -80,11 +75,7 @@ export default function PostDetail() {
 
     // Check for inappropriate content
     if (containsInappropriateContent(commentText)) {
-      toast({
-        title: "Inappropriate Content Detected",
-        description: "Your comment contains offensive language. Please remove inappropriate words and try again.",
-        variant: "destructive",
-      });
+      toast.error("Inappropriate Content Detected", { description: "Your comment contains offensive language. Please remove inappropriate words and try again." });
       return;
     }
 
@@ -96,20 +87,13 @@ export default function PostDetail() {
       });
 
       if (response.success) {
-        toast({
-          title: "Comment posted!",
-          description: "Your comment has been added.",
-        });
+        toast.success("Comment posted!", { description: "Your comment has been added." });
         setCommentText("");
         fetchComments();
         fetchPost();
       }
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to post comment",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: error.message || "Failed to post comment" });
     } finally {
       setIsSubmitting(false);
     }
@@ -128,11 +112,11 @@ export default function PostDetail() {
       } catch (error) {
         // Fallback to clipboard
         await navigator.clipboard.writeText(postUrl);
-        toast({ title: "Link copied to clipboard" });
+        toast("Link copied to clipboard");
       }
     } else {
       await navigator.clipboard.writeText(postUrl);
-      toast({ title: "Link copied to clipboard" });
+      toast("Link copied to clipboard");
     }
   };
 
@@ -150,16 +134,12 @@ export default function PostDetail() {
         });
       }
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to save post",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: error.message || "Failed to save post" });
     }
   };
 
   const handleReport = () => {
-    toast({ title: "Report submitted", description: "Thank you for letting us know." });
+    toast("Report submitted", { description: "Thank you for letting us know." });
   };
 
   const handleDelete = async () => {
@@ -167,10 +147,10 @@ export default function PostDetail() {
     if (!confirm("Are you sure you want to delete this post?")) return;
     try {
       await communicationService.deletePost(post._id);
-      toast({ title: "Post deleted" });
+      toast("Post deleted");
       navigate(-1);
     } catch (error: any) {
-      toast({ title: "Error", description: error.message || "Failed to delete", variant: "destructive" });
+      toast.error("Error", { description: error.message || "Failed to delete" });
     }
   };
 
@@ -210,7 +190,7 @@ export default function PostDetail() {
     <div className="min-h-screen bg-background pb-12">
       <div className="w-full">
         {/* Header - Fixed/Sticky improved */}
-        <div className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border/40 transition-all duration-200 supports-[backdrop-filter]:bg-background/80">
+        <div className="sticky top-0 z-50 bg-background/95 border-b border-border/40 transition-all duration-200 supports-[backdrop-filter]:bg-background/80">
           <div className="flex items-center gap-3 px-4 sm:px-6 py-3 max-w-5xl mx-auto">
             <Button
               variant="ghost"
@@ -246,7 +226,7 @@ export default function PostDetail() {
 
           {/* Main Content */}
           <div className="flex-1 min-w-0 space-y-4 sm:space-y-6">
-            <Card className="rounded-3xl border-border/60 bg-gradient-to-br from-card to-muted/20 overflow-hidden shadow-sm">
+            <Card className="rounded-3xl border-border/60 from-card to-muted/20 overflow-hidden shadow-sm">
               <div className="p-4 sm:p-6">
                 {/* Post Header */}
                 <div className="flex items-start gap-4 mb-4 sm:mb-6">
@@ -266,7 +246,7 @@ export default function PostDetail() {
                   <div className="relative flex-shrink-0">
                     <Avatar className="w-10 h-10 sm:w-12 sm:h-12 border-2 border-background ring-2 ring-border/50 shadow-sm">
                       <AvatarImage src={post.author?.avatar} className="object-cover" />
-                      <AvatarFallback className="bg-gradient-to-br from-primary/10 to-primary/20 text-primary font-semibold">
+                      <AvatarFallback className=" from-primary/10 to-primary/20 text-primary font-semibold">
                         {getUserInitials(post.author?.name || 'User')}
                       </AvatarFallback>
                     </Avatar>
@@ -298,7 +278,7 @@ export default function PostDetail() {
                   </div>
 
                   <div className="flex items-center gap-1">
-                    <Badge variant="outline" className="hidden sm:inline-flex bg-background/50 backdrop-blur-sm rounded-full px-3">
+                    <Badge variant="outline" className="hidden sm:inline-flex bg-background/50 rounded-full px-3">
                       {post.category}
                     </Badge>
                     <Button
@@ -320,7 +300,7 @@ export default function PostDetail() {
                         {isAuthor ? (
                           <>
                             <DropdownMenuItem onClick={() => {
-                              toast({ title: "Edit not implemented in detail view", description: "Please edit from the feed." });
+                              toast("Edit not implemented in detail view", { description: "Please edit from the feed." });
                             }}>
                               <Edit className="mr-2 h-4 w-4" />
                               Edit
@@ -352,7 +332,7 @@ export default function PostDetail() {
 
                 {/* Mobile Category Badge */}
                 <div className="sm:hidden mb-4">
-                  <Badge variant="outline" className="bg-background/50 backdrop-blur-sm rounded-full px-3">
+                  <Badge variant="outline" className="bg-background/50 rounded-full px-3">
                     {post.category}
                   </Badge>
                 </div>
@@ -422,7 +402,7 @@ export default function PostDetail() {
             </Card>
 
             {/* Comments Section */}
-            <Card className="comments-section rounded-3xl border-border/60 bg-gradient-to-br from-card to-muted/10 shadow-sm overflow-hidden text-left">
+            <Card className="comments-section rounded-3xl border-border/60 from-card to-muted/10 shadow-sm overflow-hidden text-left">
               <div className="p-4 sm:p-6">
                 {/* Comment Input */}
                 <div className="mb-8">
@@ -539,3 +519,5 @@ export default function PostDetail() {
     </div>
   );
 }
+
+

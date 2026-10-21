@@ -7,13 +7,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { userService, handleApiError, handleApiSuccess } from "@/services/ApiServices";
 
 export default function Settings() {
   const { user, fetchCurrentUser, isLoading, isInitialized } = useAuth();
-  const { toast } = useToast();
   
   // Profile form states
   const [name, setName] = useState("");
@@ -43,31 +42,19 @@ export default function Settings() {
       
       // Basic validation with null/undefined checks
       if (!name || !name.trim()) {
-        toast({
-          title: "Validation Error",
-          description: "Name is required.",
-          variant: "destructive",
-        });
+        toast.error("Name is required");
         return;
       }
 
       if (!email || !email.trim()) {
-        toast({
-          title: "Validation Error",
-          description: "Email is required.",
-          variant: "destructive",
-        });
+        toast.error("Email is required");
         return;
       }
 
       // Validate email format
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email.trim())) {
-        toast({
-          title: "Validation Error",
-          description: "Please enter a valid email address.",
-          variant: "destructive",
-        });
+        toast.error("Please enter a valid email address");
         return;
       }
 
@@ -106,21 +93,12 @@ export default function Settings() {
       const response = await userService.updateProfile(profileData);
       
       if (response.success) {
-        toast({
-          title: "Profile Updated",
-          description: "Your profile has been updated successfully.",
-        });
-        
-        // Refresh user data
+        toast.success("Profile updated!", { description: "Your profile has been saved successfully." });
         await fetchCurrentUser();
       }
     } catch (error: any) {
       const apiError = handleApiError(error);
-      toast({
-        title: "Update Failed",
-        description: apiError.message || "Failed to update profile. Please try again.",
-        variant: "destructive",
-      });
+      toast.error("Update failed", { description: apiError.message || "Failed to update profile. Please try again." });
     } finally {
       setIsUpdatingProfile(false);
     }
@@ -129,29 +107,17 @@ export default function Settings() {
   const handlePasswordChange = async () => {
     // Validation
     if (!currentPassword || !newPassword || !confirmPassword) {
-      toast({
-        title: "Validation Error",
-        description: "Please fill in all password fields.",
-        variant: "destructive",
-      });
+      toast.error("Please fill in all password fields");
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      toast({
-        title: "Validation Error",
-        description: "New passwords do not match.",
-        variant: "destructive",
-      });
+      toast.error("Passwords don't match", { description: "New password and confirmation must match." });
       return;
     }
 
     if (newPassword.length < 6) {
-      toast({
-        title: "Validation Error",
-        description: "New password must be at least 6 characters long.",
-        variant: "destructive",
-      });
+      toast.error("Password too short", { description: "Password must be at least 6 characters." });
       return;
     }
 
@@ -164,23 +130,14 @@ export default function Settings() {
       });
 
       if (response.success) {
-        toast({
-          title: "Password Changed",
-          description: "Your password has been updated successfully.",
-        });
-        
-        // Clear password fields
+        toast.success("Password changed!", { description: "Your password has been updated successfully." });
         setCurrentPassword("");
         setNewPassword("");
         setConfirmPassword("");
       }
     } catch (error: any) {
       const apiError = handleApiError(error);
-      toast({
-        title: "Password Change Failed",
-        description: apiError.message,
-        variant: "destructive",
-      });
+      toast.error("Password change failed", { description: apiError.message });
     } finally {
       setIsChangingPassword(false);
     }
@@ -192,21 +149,13 @@ export default function Settings() {
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      toast({
-        title: "Invalid File",
-        description: "Please select an image file (JPG, PNG, or GIF).",
-        variant: "destructive",
-      });
+      toast.error("Please select an image file (JPG, PNG, or GIF)");
       return;
     }
 
     // Validate file size (2MB max)
     if (file.size > 2 * 1024 * 1024) {
-      toast({
-        title: "File Too Large",
-        description: "Please select an image smaller than 2MB.",
-        variant: "destructive",
-      });
+      toast.error("File too large", { description: "Please select an image smaller than 2MB." });
       return;
     }
 
@@ -219,21 +168,12 @@ export default function Settings() {
       const response = await userService.updateAvatar(formData);
       
       if (response.success) {
-        toast({
-          title: "Avatar Updated",
-          description: "Your profile photo has been updated successfully.",
-        });
-        
-        // Refresh user data to get new avatar URL
+        toast.success("Photo updated!", { description: "Your profile photo has been updated." });
         await fetchCurrentUser();
       }
     } catch (error: any) {
       const apiError = handleApiError(error);
-      toast({
-        title: "Upload Failed",
-        description: apiError.message,
-        variant: "destructive",
-      });
+      toast.error("Upload failed", { description: apiError.message });
     } finally {
       setIsUploadingAvatar(false);
     }

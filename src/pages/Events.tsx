@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { Calendar, MapPin, Users, Clock, Search, CalendarDays, ChevronLeft, ChevronRight, Plus, Loader2, Check } from "lucide-react";
 import { StatusButton } from "@/components/ui/status-button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { InfoTag } from "@/components/ui/InfoTag";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { eventService } from "@/services/ApiServices";
 import { userService } from "@/services/ApiServices";
 import { cache, CACHE_KEYS, CACHE_TTL } from "@/lib/cache";
@@ -32,7 +33,7 @@ interface Event {
 const ITEMS_PER_PAGE = 6;
 
 export default function Events() {
-    const { toast } = useToast();
+    const { confirm, Dialog: ConfirmDialogEl } = useConfirm();
     const [searchQuery, setSearchQuery] = useState("");
     const [events, setEvents] = useState<Event[]>([]);
     const [loading, setLoading] = useState(true);
@@ -72,11 +73,11 @@ export default function Events() {
                 await checkRegisteredEvents(response.data);
             } else {
                 setError(response.message || "Failed to fetch events");
-                toast({ title: "Error", description: "Failed to fetch events", variant: "destructive" });
+                toast.error("Failed to fetch events");
             }
         } catch (error: any) {
             setError(error.message || "Failed to fetch events");
-            toast({ title: "Error", description: "Failed to fetch events", variant: "destructive" });
+            toast.error("Failed to fetch events");
         } finally {
             setLoading(false);
         }
@@ -138,18 +139,14 @@ export default function Events() {
 
             const userId = await getCurrentUserId();
             if (!userId) {
-                toast({ title: "Error", description: "Please login to join events", variant: "destructive" });
+                toast.error("Error", { description: "Please login to join events" });
                 return;
             }
 
             const response = await eventService.joinEvent(eventId);
 
             if (response.success) {
-                toast({ 
-                    title: "Successfully joined the event!", 
-                    description: "You will receive event updates via email.",
-                    variant: "success"
-                });
+                toast.success("Joined event!", { description: "You will receive event updates via email." });
 
                 setRegisteredEvents(prev => new Set(prev).add(eventId));
 
@@ -161,29 +158,36 @@ export default function Events() {
                     )
                 );
             } else {
-                toast({ title: "Error", description: response.message || "Failed to join event", variant: "destructive" });
+                toast.error("Failed to join event", { description: response.message });
             }
         } catch (error: any) {
-            toast({ title: "Error", description: error.message || "Failed to join event", variant: "destructive" });
+            toast.error("Failed to join event", { description: error.message });
         } finally {
             setJoiningEvent(null);
         }
     };
 
-    const handleLeaveEvent = async (eventId: string) => {
+    const handleLeaveEvent = async (eventId: string, eventTitle?: string) => {
+        const ok = await confirm({
+          title: "Leave Event?",
+          description: `You'll be removed from "${eventTitle || 'this event'}". You can rejoin later if spots are available.`,
+          confirmText: "Leave Event",
+          variant: "warning",
+        });
+        if (!ok) return;
         try {
             setJoiningEvent(eventId);
 
             const userId = await getCurrentUserId();
             if (!userId) {
-                toast({ title: "Error", description: "Unable to leave event", variant: "destructive" });
+                toast.error("Unable to leave event");
                 return;
             }
 
             const response = await eventService.leaveEvent(eventId);
 
             if (response.success) {
-                toast({ title: "Successfully left the event", variant: "success" });
+                toast.success("Left the event");
 
                 setRegisteredEvents(prev => {
                     const newSet = new Set(prev);
@@ -202,10 +206,10 @@ export default function Events() {
                     )
                 );
             } else {
-                toast({ title: "Error", description: response.message || "Failed to leave event", variant: "destructive" });
+                toast.error("Failed to leave event", { description: response.message });
             }
         } catch (error: any) {
-            toast({ title: "Error", description: error.message || "Failed to leave event", variant: "destructive" });
+            toast.error("Failed to leave event", { description: error.message });
         } finally {
             setJoiningEvent(null);
         }
@@ -296,7 +300,7 @@ export default function Events() {
                         <span className="text-foreground font-medium truncate">{formatDate(event.date)}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-purple-500 flex-shrink-0" />
+                        <Clock className="h-4 w-4 text-blue-500 flex-shrink-0" />
                         <span className="text-foreground font-medium truncate">{event.time || "TBD"}</span>
                     </div>
                     {event.location && (
@@ -322,7 +326,7 @@ export default function Events() {
                             : 'bg-green-500/10 text-green-600 hover:bg-green-500/25 hover:text-green-700 border border-green-500/20 hover:border-green-500/40 dark:bg-green-500/15 dark:text-green-400 dark:hover:bg-green-500/30 dark:hover:text-green-300'
                             }`}
                         onClick={() => registeredEvents.has(event._id)
-                            ? handleLeaveEvent(event._id)
+                            ? handleLeaveEvent(event._id, event.title)
                             : handleJoinEvent(event._id)
                         }
                         disabled={
@@ -398,7 +402,7 @@ export default function Events() {
             {[0, 1, 2, 3, 4, 5].map((i) => (
                 <div
                     key={i}
-                    className="rounded-2xl bg-card border border-border/50 p-4 sm:p-5 space-y-3 sm:space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300"
+                    className="rounded-2xl bg-card border border-border/50 p-4 sm:p-5 space-y-3 sm:space-y-4 animate-in fade-in slide-in- duration-300"
                     style={{ animationDelay: `${i * 40}ms` }}
                 >
                     <div className="space-y-2">
@@ -536,6 +540,8 @@ export default function Events() {
                     )}
                 </div>
             )}
+        {ConfirmDialogEl}
         </div>
     );
 }
+

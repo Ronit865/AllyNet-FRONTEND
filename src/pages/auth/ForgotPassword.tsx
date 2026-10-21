@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from 'sonner';
 import { authService, handleApiError } from "@/services/ApiServices";
 
 
@@ -22,7 +22,6 @@ type ForgotPasswordForm = z.infer<typeof forgotPasswordSchema>;
 export const ForgotPassword = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const { toast } = useToast();
   const navigate = useNavigate();
 
   const form = useForm<ForgotPasswordForm>({
@@ -39,10 +38,7 @@ export const ForgotPassword = () => {
 
       if (response.success) {
         setIsSubmitted(true);
-        toast({
-          title: "OTP sent",
-          description: "Check your email for the verification code.",
-        });
+        toast.success("OTP sent", { description: "Check your email for the verification code." });
 
         // Navigate after a brief delay
         setTimeout(() => {
@@ -59,11 +55,7 @@ export const ForgotPassword = () => {
     }
      catch (error: any) {
     const apiError = handleApiError(error);
-    toast({
-      title: "Error",
-      description: apiError.message || "Failed to send reset code. Please try again.",
-      variant: "destructive",
-    });
+    toast.error("Error", { description: apiError.message || "Failed to send reset code. Please try again." });
   } finally {
     setIsLoading(false);
   }
@@ -184,3 +176,4 @@ return (
   </motion.div>
 );
 };
+

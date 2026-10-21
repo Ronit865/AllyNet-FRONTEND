@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -9,7 +9,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { jobService } from '@/services/ApiServices';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { Briefcase, MapPin, IndianRupee, Check, Trash2, Clock, AlertCircle, CheckCircle, Calendar, Users, Loader2, Mail, GraduationCap } from 'lucide-react';
 
 interface Job {
@@ -50,7 +50,6 @@ export function Jobs() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [jobToDelete, setJobToDelete] = useState<string | null>(null);
-  const { toast } = useToast();
 
   // Applicants Dialog State
   const [isApplicantsDialogOpen, setIsApplicantsDialogOpen] = useState(false);
@@ -76,20 +75,12 @@ export function Jobs() {
       } else {
         const errorMsg = response.message || 'Failed to fetch jobs';
         setError(errorMsg);
-        toast({
-          title: "Error",
-          description: errorMsg,
-          variant: "destructive",
-        });
+        toast.error("Error", { description: errorMsg });
       }
     } catch (error: any) {
       const errorMsg = error.message || 'Failed to load jobs';
       setError(errorMsg);
-      toast({
-        title: "Error",
-        description: errorMsg,
-        variant: "destructive",
-      });
+      toast.error("Error", { description: errorMsg });
     } finally {
       setLoading(false);
     }
@@ -105,25 +96,13 @@ export function Jobs() {
       const response = await jobService.verifyJob(jobId);
 
       if (response.success) {
-        toast({
-          title: "Job verified",
-          description: "Job has been successfully verified",
-          variant: "success",
-        });
+        toast.success("Job verified", { description: "Job has been successfully verified" });
         fetchJobs();
       } else {
-        toast({
-          title: "Error",
-          description: response.message || 'Failed to verify job',
-          variant: "destructive",
-        });
+        toast.error("Error", { description: response.message || 'Failed to verify job' });
       }
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || 'Failed to verify job',
-        variant: "destructive",
-      });
+      toast.error("Error", { description: error.message || 'Failed to verify job' });
     } finally {
       setActionLoading(null);
     }
@@ -137,25 +116,13 @@ export function Jobs() {
       const response = await jobService.rejectJob(jobToDelete);
 
       if (response.data.success) {
-        toast({
-          title: "Job rejected",
-          description: "Job has been successfully rejected",
-          variant: "success",
-        });
+        toast.success("Job rejected", { description: "Job has been successfully rejected" });
         fetchJobs();
       } else {
-        toast({
-          title: "Error",
-          description: response.data.message || 'Failed to reject job',
-          variant: "destructive",
-        });
+        toast.error("Error", { description: response.data.message || 'Failed to reject job' });
       }
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || 'Failed to reject job',
-        variant: "destructive",
-      });
+      toast.error("Error", { description: error.message || 'Failed to reject job' });
     } finally {
       setActionLoading(null);
       setDeleteDialogOpen(false);
@@ -175,7 +142,7 @@ export function Jobs() {
     return (
       <div className="space-y-6 animate-in fade-in duration-500">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-500">
+        <div className="flex flex-col sm:flex-row justify-between items-start gap-3 animate-in fade-in slide-in- duration-500">
           <div className="space-y-2">
             <Skeleton className="h-8 w-56 bg-muted/60" />
             <Skeleton className="h-4 w-80 bg-muted/60" />
@@ -183,11 +150,11 @@ export function Jobs() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 animate-in fade-in slide-in-from-bottom-2 duration-500" style={{ animationDelay: '100ms' }}>
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 animate-in fade-in slide-in- duration-500" style={{ animationDelay: '100ms' }}>
           {[0, 1, 2].map((i) => (
             <div
               key={i}
-              className="rounded-2xl p-4 sm:p-5 bg-card/50 border border-border/50"
+              className="rounded-2xl p-4 sm:p-5 bg-card border border-border/50"
               style={{ animationDelay: `${i * 50}ms` }}
             >
               <div className="flex items-center justify-between">
@@ -202,7 +169,7 @@ export function Jobs() {
         </div>
 
         {/* Tabs */}
-        <div className="animate-in fade-in slide-in-from-bottom-2 duration-500" style={{ animationDelay: '200ms' }}>
+        <div className="animate-in fade-in slide-in- duration-500" style={{ animationDelay: '200ms' }}>
           <Skeleton className="h-10 w-full rounded-lg bg-muted/60" />
         </div>
 
@@ -211,7 +178,7 @@ export function Jobs() {
           {[0, 1, 2, 3, 4, 5].map((i) => (
             <div
               key={i}
-              className="rounded-2xl p-5 bg-card/50 border border-border/50 space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500"
+              className="rounded-2xl p-5 bg-card border border-border/50 space-y-4 animate-in fade-in slide-in- duration-500"
               style={{ animationDelay: `${300 + i * 50}ms` }}
             >
               <div className="flex items-start justify-between">
@@ -414,8 +381,8 @@ export function Jobs() {
         >
           <DialogHeader className="pb-4 border-b border-card-border/20">
             <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
-                <Briefcase className="h-6 w-6 text-orange-500" />
+              <div className="h-12 w-12 rounded-xl from-primary/20 to-primary/10 flex items-center justify-center">
+                <Briefcase className="h-6 w-6 text-muted-foreground" />
               </div>
               <div>
                 <DialogTitle className="text-xl font-semibold text-foreground">
@@ -462,7 +429,7 @@ export function Jobs() {
                           src={applicant.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${applicant.name || applicant.email}`}
                           alt={applicant.name || 'Applicant'}
                         />
-                        <AvatarFallback className="bg-gradient-to-br from-primary/20 to-accent/50 text-primary font-semibold">
+                        <AvatarFallback className=" from-primary/20 to-accent/50 text-primary font-semibold">
                           {(applicant.name || applicant.email || 'A').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
                         </AvatarFallback>
                       </Avatar>
@@ -516,7 +483,7 @@ interface JobCardProps {
 
 function JobCard({ job, onVerify, onDelete, onViewApplicants, actionLoading }: JobCardProps) {
   return (
-    <Card className="overflow-hidden border-border/30 bg-card font-sans shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 flex flex-col h-full group">
+    <Card className="overflow-hidden border-border/30 bg-card font-sans shadow-sm hover:shadow-lg transition-colors duration-100 flex flex-col h-full group">
       {/* Header */}
       <CardHeader className="pb-2 pt-5 px-5">
         <div className="flex justify-between items-start gap-3">
@@ -574,7 +541,7 @@ function JobCard({ job, onVerify, onDelete, onViewApplicants, actionLoading }: J
         {job.applicants && job.applicants.length > 0 && (
           <div className="flex items-center justify-between text-sm mb-4">
             <div className="flex items-center gap-2 text-muted-foreground">
-              <Users className="h-4 w-4 text-purple-500 flex-shrink-0" />
+              <Users className="h-4 w-4 text-blue-500 flex-shrink-0" />
               <span className="font-medium">{job.applicants.length} applicant{job.applicants.length !== 1 ? 's' : ''}</span>
             </div>
             {onViewApplicants && (
@@ -619,3 +586,5 @@ function JobCard({ job, onVerify, onDelete, onViewApplicants, actionLoading }: J
 }
 
 export default Jobs;
+
+

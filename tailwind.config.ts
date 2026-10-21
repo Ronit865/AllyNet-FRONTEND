@@ -1,4 +1,4 @@
-import type { Config } from "tailwindcss";
+﻿import type { Config } from "tailwindcss";
 
 export default {
   darkMode: ["class"],
@@ -59,9 +59,21 @@ export default {
         },
       },
       borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        none: "0",
+        sm:   "calc(var(--radius) - 6px)",   /* 6px  */
+        md:   "calc(var(--radius) - 4px)",   /* 8px  */
+        DEFAULT: "calc(var(--radius) - 2px)",/* 10px */
+        lg:   "var(--radius)",               /* 12px */
+        xl:   "calc(var(--radius) + 2px)",   /* 14px */
+        "2xl":"calc(var(--radius) + 6px)",   /* 18px */
+        "3xl":"calc(var(--radius) + 10px)",  /* 22px */
+        full: "9999px",
+      },
+      fontFamily: {
+        sans: ["'Plus Jakarta Sans'", "system-ui", "-apple-system", "BlinkMacSystemFont", "'Segoe UI'", "sans-serif"],
+        numeric: ["'IBM Plex Sans'", "system-ui", "-apple-system", "'Segoe UI'", "sans-serif"],
+        mono: ["'JetBrains Mono'", "Menlo", "Monaco", "'Courier New'", "monospace"],
+        id: ["'JetBrains Mono'", "Menlo", "Monaco", "'Courier New'", "monospace"],
       },
       keyframes: {
         "accordion-down": {

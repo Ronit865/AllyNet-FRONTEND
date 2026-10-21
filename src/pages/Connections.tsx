@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { connectionService } from "@/services/ApiServices";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { useNavigate } from "react-router-dom";
 import { ChatDialog } from "@/components/chat/ChatDialog";
 import { UserProfileDialog } from "@/components/profile/UserProfileDialog";
@@ -18,7 +19,7 @@ export default function Connections() {
   const [myConnections, setMyConnections] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<{ [key: string]: boolean }>({});
-  const { toast } = useToast();
+  const { confirm, Dialog: ConfirmDialogEl } = useConfirm();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -37,11 +38,7 @@ export default function Connections() {
       setPendingRequests(pendingRes?.data || []);
       setMyConnections(connectionsRes?.data || []);
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to fetch connections",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: error.message || "Failed to fetch connections" });
     } finally {
       setLoading(false);
     }
@@ -52,38 +49,30 @@ export default function Connections() {
       setActionLoading(prev => ({ ...prev, [connectionId]: true }));
       await connectionService.acceptConnectionRequest(connectionId);
 
-      toast({
-        title: "Connection accepted!",
-        description: "You are now connected.",
-      });
+      toast.success("Connection accepted!", { description: "You are now connected." });
       fetchData();
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to accept connection",
-        variant: "destructive",
-      });
+      toast.error("Failed to accept connection", { description: error.message });
     } finally {
       setActionLoading(prev => ({ ...prev, [connectionId]: false }));
     }
   };
 
   const handleReject = async (connectionId: string) => {
+    const ok = await confirm({
+      title: "Decline Request?",
+      description: "Decline this connection request? The sender won't be notified.",
+      confirmText: "Decline",
+      variant: "warning",
+    });
+    if (!ok) return;
     try {
       setActionLoading(prev => ({ ...prev, [connectionId]: true }));
       await connectionService.rejectConnectionRequest(connectionId);
-
-      toast({
-        title: "Connection rejected",
-        description: "Request has been declined.",
-      });
+      toast.success("Request declined");
       fetchData();
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to reject connection",
-        variant: "destructive",
-      });
+      toast.error("Failed to decline request", { description: error.message });
     } finally {
       setActionLoading(prev => ({ ...prev, [connectionId]: false }));
     }
@@ -191,7 +180,7 @@ export default function Connections() {
                     <p className="text-muted-foreground">No pending connection requests</p>
                     <Button
                       variant="outline"
-                      className="mt-4 border-purple-500/50 text-purple-600 hover:bg-purple-500 hover:text-white"
+                      className="mt-4 border-blue-500/50 text-blue-600 hover:bg-blue-500 hover:text-white"
                       onClick={() => navigate('/alumni')}
                     >
                       Browse Alumni
@@ -275,7 +264,7 @@ export default function Connections() {
                     <p className="text-muted-foreground">No connections yet</p>
                     <Button
                       variant="outline"
-                      className="mt-4 border-purple-500/50 text-purple-600 hover:bg-purple-500 hover:text-white"
+                      className="mt-4 border-blue-500/50 text-blue-600 hover:bg-blue-500 hover:text-white"
                       onClick={() => navigate('/alumni')}
                     >
                       Browse Alumni
@@ -345,6 +334,10 @@ export default function Connections() {
           setChatDialogOpen(true);
         }}
       />
+      {ConfirmDialogEl}
     </div>
   );
 }
+
+
+

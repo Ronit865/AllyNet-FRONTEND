@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -42,7 +42,7 @@ export function ScrollToTop() {
           <Button
             onClick={scrollToTop}
             size="icon"
-            className="h-12 w-12 rounded-full bg-primary/90 hover:bg-primary shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all duration-300 hover:-translate-y-1"
+            className="h-12 w-12 rounded-full bg-primary/90 hover:bg-primary shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-colors duration-100"
           >
             <motion.div
               animate={{ y: [0, -3, 0] }}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { adminService } from "@/services/ApiServices";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -139,20 +139,13 @@ export function Alumni() {
       return await adminService.uploadCSV(formData);
     },
     onSuccess: (response) => {
-      toast({
-        title: "Success",
-        description: "Alumni data uploaded successfully",
-      });
+      toast.success("Success", { description: "Alumni data uploaded successfully" });
       setIsDialogOpen(false);
       setSelectedFile(null);
       queryClient.invalidateQueries({ queryKey: ["alumni"] });
     },
     onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to upload CSV file",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: error.message || "Failed to upload CSV file" });
     },
   });
 
@@ -162,20 +155,13 @@ export function Alumni() {
       return await adminService.editUserDetails(data.userId, data.formData);
     },
     onSuccess: () => {
-      toast({
-        title: "Success",
-        description: "User details updated successfully",
-      });
+      toast.success("Success", { description: "User details updated successfully" });
       setIsEditDialogOpen(false);
       setEditingUser(null);
       queryClient.invalidateQueries({ queryKey: ["alumni"] });
     },
     onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update user details",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: error.message || "Failed to update user details" });
     },
   });
 
@@ -185,20 +171,13 @@ export function Alumni() {
       return await adminService.deleteUser(userId);
     },
     onSuccess: () => {
-      toast({
-        title: "Success",
-        description: "User deleted successfully",
-      });
+      toast.success("Success", { description: "User deleted successfully" });
       setIsDeleteDialogOpen(false);
       setUserToDelete(null);
       queryClient.invalidateQueries({ queryKey: ["alumni"] });
     },
     onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to delete user",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: error.message || "Failed to delete user" });
     },
   });
 
@@ -220,11 +199,7 @@ export function Alumni() {
   // Handle error
   useEffect(() => {
     if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to fetch alumni data",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to fetch alumni data" });
     }
   }, [error]);
 
@@ -341,11 +316,7 @@ export function Alumni() {
     if (file && file.type === 'text/csv') {
       setSelectedFile(file);
     } else {
-      toast({
-        title: "Invalid file type",
-        description: "Please select a CSV file",
-        variant: "destructive",
-      });
+      toast.error("Invalid file type", { description: "Please select a CSV file" });
     }
   };
 
@@ -369,11 +340,7 @@ export function Alumni() {
       if (file.type === 'text/csv') {
         setSelectedFile(file);
       } else {
-        toast({
-          title: "Invalid file type",
-          description: "Please select a CSV file",
-          variant: "destructive",
-        });
+        toast.error("Invalid file type", { description: "Please select a CSV file" });
       }
     }
   };
@@ -405,7 +372,7 @@ export function Alumni() {
           {[0, 1, 2].map((i) => (
             <div
               key={i}
-              className="rounded-2xl p-4 sm:p-5 bg-card/50 border border-border/50"
+              className="rounded-2xl p-4 sm:p-5 bg-card border border-border/50"
             >
               <div className="flex items-center justify-between">
                 <div className="space-y-3">
@@ -429,7 +396,7 @@ export function Alumni() {
         </div>
 
         {/* Table */}
-        <div className="rounded-2xl bg-card/50 border border-border/50 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-500" style={{ animationDelay: '300ms' }}>
+        <div className="rounded-2xl bg-card border border-border/50 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-500" style={{ animationDelay: '300ms' }}>
           <div className="bg-muted/30 p-4 border-b border-border/30">
             <div className="flex gap-8">
               {['w-10', 'w-32', 'w-40', 'w-24', 'w-20', 'w-16'].map((width, i) => (
@@ -972,15 +939,15 @@ export function Alumni() {
 
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <div className="flex items-center gap-2 text-muted-foreground">
-                      <Calendar className="h-3 w-3 text-blue-500" />
+                      <Calendar className="h-3 w-3 text-muted-foreground" />
                       <span>{alumni.graduationYear || "Year N/A"}</span>
                     </div>
                     <div className="flex items-center gap-2 text-muted-foreground">
-                      <Building className="h-3 w-3 text-orange-500" />
+                      <Building className="h-3 w-3 text-muted-foreground" />
                       <span className="truncate">{alumni.course || "Course N/A"}</span>
                     </div>
                     <div className="flex items-center gap-2 text-muted-foreground col-span-2">
-                      <Phone className="h-3 w-3 text-green-500" />
+                      <Phone className="h-3 w-3 text-muted-foreground" />
                       <span>{alumni.phone || "No phone"}</span>
                     </div>
                   </div>
@@ -1014,3 +981,4 @@ export function Alumni() {
     </div>
   );
 }
+

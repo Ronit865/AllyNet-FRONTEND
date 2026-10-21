@@ -52,7 +52,7 @@ import {
     Clock,
     User,
 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from 'sonner';
 
 interface Report {
     _id: string;
@@ -97,7 +97,6 @@ interface ReportedUser {
 }
 
 export function Reports() {
-    const { toast } = useToast();
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
     const [banDialogOpen, setBanDialogOpen] = useState(false);
@@ -213,7 +212,7 @@ export function Reports() {
             spam: "bg-yellow-500/20 text-yellow-600",
             harassment: "bg-red-500/20 text-red-500",
             inappropriate: "bg-orange-500/20 text-orange-500",
-            misinformation: "bg-purple-500/20 text-purple-500",
+            misinformation: "bg-blue-500/20 text-blue-500",
             abuse: "bg-rose-500/20 text-rose-500",
             other: "bg-gray-500/20 text-gray-500",
         };
@@ -679,3 +678,4 @@ export function Reports() {
         </div>
     );
 }
+

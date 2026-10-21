@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Search, Filter, MapPin, Briefcase, Calendar, Loader2, MessageCircle, UserPlus, UserCheck, Users, GraduationCap, Mail, Building2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { adminService, userService, connectionService, handleApiError } from "@/services/ApiServices";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { ChatDialog } from "@/components/chat/ChatDialog";
@@ -75,11 +75,7 @@ export default function Alumni() {
   // Handle error
   useEffect(() => {
     if (error) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to fetch alumni data",
-        variant: "destructive",
-      });
+      toast.error("Failed to load alumni data", { description: error.message });
     }
   }, [error]);
 
@@ -155,11 +151,11 @@ export default function Alumni() {
       setLoadingConnections(prev => ({ ...prev, [userId]: true }));
       const response = await connectionService.sendConnectionRequest(userId);
       if (response.success) {
-        toast({ title: "Connection request sent!", description: "Your request has been sent successfully." });
+        toast.success("Connection request sent!", { description: "Your request has been sent successfully." });
         setConnectionStatuses(prev => ({ ...prev, [userId]: { status: 'pending', isRequester: true } }));
       }
     } catch (error: any) {
-      toast({ title: "Error", description: error.message || "Failed to send connection request", variant: "destructive" });
+      toast.error("Failed to send connection request", { description: error.message });
     } finally {
       setLoadingConnections(prev => ({ ...prev, [userId]: false }));
     }
@@ -251,13 +247,13 @@ export default function Alumni() {
             </div>
           ) : (
             filteredAlumni.map((person) => (
-              <Card key={person._id} className="group relative flex flex-col items-center bg-card hover:bg-muted/30 border border-border/40 shadow-sm hover:shadow-lg transition-all duration-300 rounded-[24px] p-5 h-full overflow-hidden">
+              <Card key={person._id} className="group relative flex flex-col items-center bg-card hover:bg-muted/30 border border-border/40 shadow-sm hover:shadow-lg transition-colors duration-100 rounded-[24px] p-5 h-full overflow-hidden">
 
                 {/* Avatar Section */}
                 <div className="relative mb-3 cursor-pointer" onClick={() => handleAvatarClick(person._id)}>
                   <Avatar className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl ring-4 ring-background shadow-sm transition-transform group-hover:scale-105 duration-300">
                     <AvatarImage src={person.avatar} className="object-cover" />
-                    <AvatarFallback className="text-xl font-bold bg-gradient-to-br from-primary/10 to-primary/30 text-primary rounded-2xl">
+                    <AvatarFallback className="text-xl font-bold from-primary/10 to-primary/30 text-primary rounded-2xl">
                       {person.name?.split(' ').slice(0, 2).map(n => n[0]).join('')}
                     </AvatarFallback>
                   </Avatar>
@@ -287,12 +283,12 @@ export default function Alumni() {
                 {/* Stats / Info Row */}
                 <div className="flex items-center justify-center w-full gap-3 my-3 text-xs font-semibold">
                   <div className="flex items-center gap-1.5 bg-blue-500/10 text-blue-700 dark:text-blue-300 px-3 py-1.5 rounded-full">
-                    <GraduationCap className="w-3.5 h-3.5 text-blue-500" />
+                    <GraduationCap className="w-3.5 h-3.5 text-muted-foreground" />
                     <span>{person.graduationYear || 'N/A'}</span>
                   </div>
                   {(person.location || person.email) && (
-                    <div className="flex items-center gap-1.5 bg-purple-500/10 text-purple-700 dark:text-purple-300 px-3 py-1.5 rounded-full max-w-[140px]">
-                      {person.location ? <MapPin className="w-3.5 h-3.5 text-purple-500" /> : <Mail className="w-3.5 h-3.5 text-purple-500" />}
+                    <div className="flex items-center gap-1.5 bg-blue-500/10 text-blue-700 dark:text-blue-300 px-3 py-1.5 rounded-full max-w-[140px]">
+                      {person.location ? <MapPin className="w-3.5 h-3.5 text-muted-foreground" /> : <Mail className="w-3.5 h-3.5 text-muted-foreground" />}
                       <span className="truncate">{person.location || 'Email'}</span>
                     </div>
                   )}

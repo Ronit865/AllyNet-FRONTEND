@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils";
+﻿import { cn } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface BentoCardProps {
@@ -35,8 +35,8 @@ export function BentoCard({
     <Card
       onClick={onClick}
       className={cn(
-        "group transition-all duration-300 hover:-translate-y-1",
-        "rounded-3xl border-border/30",
+        "group transition-colors duration-100",
+        "rounded-lg border-border/30",
         "bg-gradient-to-br from-card via-card to-muted/20",
         "dark:from-card dark:via-card dark:to-muted/10",
         sizeClasses[size],

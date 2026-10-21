@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from 'sonner';
 import { authService } from "@/services/ApiServices";
 import { handleApiError , handleApiSuccess } from "@/services/ApiServices";
 
@@ -32,7 +32,6 @@ export const ResetPassword = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const { toast } = useToast();
 
   const email = location.state?.email;
   const otp = location.state?.otp;
@@ -88,21 +87,14 @@ export const ResetPassword = () => {
       const response = await authService.resetPassword(email, data.newPassword, otp);
       
       if (response.success) {
-        toast({
-          title: "Password reset successful",
-          description: "Your password has been updated. You can now sign in.",
-        });
+        toast.success("Password reset successful", { description: "Your password has been updated. You can now sign in." });
         
         // Navigate to login page
         navigate("/auth/login");
       }
     } catch (error: any) {
       const apiError = handleApiError(error);
-      toast({
-        title: "Error",
-        description: apiError.message || "Failed to reset password. Please try again.",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: apiError.message || "Failed to reset password. Please try again." });
     } finally {
       setIsLoading(false);
     }
@@ -164,7 +156,7 @@ export const ResetPassword = () => {
                           <div className="flex items-center space-x-2">
                             <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
                               <div
-                                className={`h-full transition-all duration-300 ${getStrengthColor(passwordStrength)}`}
+                                className={`h-full transition-colors duration-100 ${getStrengthColor(passwordStrength)}`}
                                 style={{ width: `${(passwordStrength / 5) * 100}%` }}
                               />
                             </div>
@@ -258,3 +250,4 @@ export const ResetPassword = () => {
     </motion.div>
   );
 };
+

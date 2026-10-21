@@ -10,7 +10,7 @@ const colorClasses = {
     blue: 'info-tag-blue',
     orange: 'info-tag-orange',
     green: 'info-tag-green',
-    purple: 'info-tag-purple',
+    purple: 'info-tag-blue',
     red: 'info-tag-red',
     cyan: 'info-tag-cyan',
     teal: 'info-tag-teal',
@@ -34,3 +34,4 @@ export function InfoTag({
         </div>
     );
 }
+

@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { userService, connectionService } from "@/services/ApiServices";
-import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
 
 interface UserProfileDialogProps {
@@ -23,7 +22,6 @@ export function UserProfileDialog({ open, onOpenChange, userId, onMessageClick }
   const [isRequester, setIsRequester] = useState(false);
   const [connectionId, setConnectionId] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
-  const { toast } = useToast();
   const { user: currentUser } = useAuth();
 
   useEffect(() => {
@@ -201,7 +199,7 @@ export function UserProfileDialog({ open, onOpenChange, userId, onMessageClick }
               <div className="grid gap-4 sm:grid-cols-2">
                 {user.email && (
                   <div className="flex items-center gap-3 p-3 rounded-2xl bg-muted/30 hover:bg-muted/50 transition-colors">
-                    <div className="bg-purple-500/10 text-purple-600 p-2.5 rounded-xl">
+                    <div className="bg-blue-500/10 text-blue-600 p-2.5 rounded-xl">
                       <Mail className="w-5 h-5" />
                     </div>
                     <div>
@@ -294,3 +292,5 @@ export function UserProfileDialog({ open, onOpenChange, userId, onMessageClick }
     </Dialog>
   );
 }
+
+

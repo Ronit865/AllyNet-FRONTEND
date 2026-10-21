@@ -1,387 +1,322 @@
-import { Search, Bell, User, LogOut, MessagesSquare, Calendar, Heart, UserPlus, MessageSquare } from "lucide-react";
-import { Input } from "@/components/ui/input";
+﻿import {
+  Bell, LogOut, MessagesSquare, Calendar, Heart,
+  UserPlus, MessageSquare, CheckCheck, Settings, X,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/context/AuthContext";
 import { authService, notificationService, messageService } from "@/services/ApiServices";
 import { useNavigate } from "react-router-dom";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { ChatDialog } from "@/components/chat/ChatDialog";
+import { cn } from "@/lib/utils";
+import { motion, AnimatePresence } from "framer-motion";
 
+/* ─── Relative time ────────────────────────────────────── */
+function relTime(ts: string) {
+  const s = (Date.now() - new Date(ts).getTime()) / 1000;
+  if (s < 60) return "just now";
+  if (s < 3600) return `${Math.floor(s / 60)}m`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h`;
+  return `${Math.floor(s / 86400)}d`;
+}
+
+/* ─── Notif icon ───────────────────────────────────────── */
+function NotifIcon({ type }: { type: string }) {
+  const cls = "w-3.5 h-3.5";
+  switch (type) {
+    case "comment":
+    case "reply":      return <MessageSquare className={cn(cls, "text-muted-foreground")} />;
+    case "upvote":     return <Heart          className={cn(cls, "text-muted-foreground")} />;
+    case "event":      return <Calendar       className={cn(cls, "text-muted-foreground")} />;
+    case "connection": return <UserPlus       className={cn(cls, "text-muted-foreground")} />;
+    default:           return <Bell           className={cn(cls, "text-muted-foreground")} />;
+  }
+}
+
+/* ─── Main Header ─────────────────────────────────────── */
 export function AppHeader() {
-  const { user, admin, logout, userType, isLoading, isInitialized } = useAuth();
+  const { user, admin, logout, userType, isInitialized } = useAuth();
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const [notifications, setNotifications] = useState<any[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [chatDialogOpen, setChatDialogOpen] = useState(false);
+
+  const [notifications, setNotifications]   = useState<any[]>([]);
+  const [unreadCount, setUnreadCount]       = useState(0);
+  const [notifOpen, setNotifOpen]           = useState(false);
+  const [chatOpen, setChatOpen]             = useState(false);
   const [selectedConversation, setSelectedConversation] = useState<any>(null);
-  const [recentConversations, setRecentConversations] = useState<any[]>([]);
-  const [unreadChatsCount, setUnreadChatsCount] = useState(0);
+  const [unreadChats, setUnreadChats]       = useState(0);
 
-  // Fetch notifications and conversations
   useEffect(() => {
-    const fetchNotifications = async () => {
+    if (!isInitialized || !(user || admin) || userType === "admin") return;
+    const load = async () => {
       try {
-        // Only fetch connection request notifications for navbar
-        const response = await notificationService.getNotifications({
-          page: 1,
-          limit: 10,
-          type: 'connection'
-        });
-        
-        if (response.success && response.data) {
-          setNotifications(response.data.notifications || []);
-          setUnreadCount(response.data.unreadCount || 0);
-        }
-      } catch (error) {
-        // Failed to fetch notifications
-      }
-    };
-
-    const fetchRecentConversations = async () => {
+        const r = await notificationService.getNotifications({ page: 1, limit: 10, type: "connection" });
+        if (r.success && r.data) { setNotifications(r.data.notifications || []); setUnreadCount(r.data.unreadCount || 0); }
+      } catch {}
       try {
-        const response = await messageService.getUserConversations();
-        const conversations = response?.data || [];
-        const conversationsArray = Array.isArray(conversations) ? conversations : [];
-        setRecentConversations(conversationsArray.slice(0, 5));
-        
-        // Count conversations with unread messages
-        const unreadCount = conversationsArray.filter((conv: any) => {
-          const lastMessage = conv.lastMessage;
-          const currentUserId = localStorage.getItem('userId');
-          // Check if last message exists, is not from current user, and is unread
-          return lastMessage && 
-                 lastMessage.sender !== currentUserId && 
-                 !lastMessage.read;
-        }).length;
-        setUnreadChatsCount(unreadCount);
-      } catch (error) {
-        // Failed to fetch conversations
-      }
+        const r = await messageService.getUserConversations();
+        const convs = Array.isArray(r?.data) ? r.data : [];
+        const uid = localStorage.getItem("userId");
+        setUnreadChats(convs.filter((c: any) => c.lastMessage && c.lastMessage.sender !== uid && !c.lastMessage.read).length);
+      } catch {}
     };
-
-    if (isInitialized && (user || admin)) {
-      // Only fetch notifications and conversations for non-admin users
-      if (userType !== 'admin') {
-        fetchNotifications();
-        fetchRecentConversations();
-        
-        // Poll for new notifications every 30 seconds
-        const interval = setInterval(() => {
-          fetchNotifications();
-          fetchRecentConversations();
-        }, 30000);
-        return () => clearInterval(interval);
-      }
-    }
+    load();
+    const t = setInterval(load, 30_000);
+    return () => clearInterval(t);
   }, [isInitialized, user, admin, userType]);
 
-  // Handle notification click
-  const handleNotificationClick = async (notification: any) => {
+  const markRead = async (n: any) => {
     try {
-      if (!notification.read) {
-        await notificationService.markAsRead(notification._id);
-        setNotifications(prev => 
-          prev.map(n => n._id === notification._id ? { ...n, read: true } : n)
-        );
-        setUnreadCount(prev => Math.max(0, prev - 1));
+      if (!n.read) {
+        await notificationService.markAsRead(n._id);
+        setNotifications(p => p.map(x => x._id === n._id ? { ...x, read: true } : x));
+        setUnreadCount(p => Math.max(0, p - 1));
       }
-      
-      setNotificationsOpen(false);
-      
-      // Redirect to connections page for connection-type notifications
-      if (notification.type === 'connection') {
-        navigate('/connections');
-      } else if (notification.link) {
-        navigate(notification.link);
-      }
-    } catch (error) {
-      // Failed to mark notification as read
-    }
+      setNotifOpen(false);
+      if (n.type === "connection") navigate("/connections");
+      else if (n.link) navigate(n.link);
+    } catch {}
   };
 
-  // Handle mark all as read
-  const handleMarkAllAsRead = async () => {
+  const markAllRead = async () => {
     try {
       await notificationService.markAllAsRead();
-      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      setNotifications(p => p.map(n => ({ ...n, read: true })));
       setUnreadCount(0);
-      toast({
-        title: "Success",
-        description: "All notifications marked as read",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to mark notifications as read",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const formatTimestamp = (timestamp: string) => {
-    try {
-      const date = new Date(timestamp);
-      const now = new Date();
-      const diffMs = now.getTime() - date.getTime();
-      const diffMins = Math.floor(diffMs / 60000);
-      const diffHours = Math.floor(diffMs / 3600000);
-      const diffDays = Math.floor(diffMs / 86400000);
-      
-      if (diffMins < 1) return 'Just now';
-      if (diffMins < 60) return `${diffMins}m ago`;
-      if (diffHours < 24) return `${diffHours}h ago`;
-      if (diffDays < 7) return `${diffDays}d ago`;
-      return date.toLocaleDateString();
+      toast.success("Marked all as read");
     } catch {
-      return timestamp;
-    }
-  };
-
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
-      case 'comment':
-      case 'reply':
-        return <MessageSquare className="w-5 h-5 text-blue-500" />;
-      case 'upvote':
-        return <Heart className="w-5 h-5 text-red-500" />;
-      case 'event':
-        return <Calendar className="w-5 h-5 text-green-500" />;
-      case 'connection':
-        return <UserPlus className="w-5 h-5 text-purple-500" />;
-      default:
-        return <Bell className="w-5 h-5 text-muted-foreground" />;
+      toast.error("Failed to mark as read");
     }
   };
 
   const handleLogout = async () => {
-    try {
-      await authService.logout();
-      logout();
-      toast({
-        title: "Logged out successfully",
-        description: "See you next time!",
-        variant: "info",
-      });
-      navigate('/auth/login');
-    } catch (error) {
-      toast({
-        title: "Logout failed",
-        description: "An error occurred during logout",
-        variant: "destructive",
-      });
-      logout();
-      navigate('/auth/login');
-    }
+    try { await authService.logout(); } catch {}
+    logout();
+    toast.success("Signed out");
+    navigate("/auth/login");
   };
 
-  // Get current user data (either user or admin)
-  const currentUser = user || admin;
-  const displayName = currentUser?.name || 'Guest';
-  const displayEmail = currentUser?.email || 'No email';
-  const avatarSrc = currentUser?.avatar || '';
-  const avatarFallback = displayName && displayName !== 'Guest' 
-    ? displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) 
-    : 'U';
-
-  // Show loading state only if not initialized AND we don't have any user data
-  if (!isInitialized && !currentUser) {
-    return (
-      <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50 border-l-0">
-        <div className="container flex h-16 items-center justify-between px-4">
-          <div className="flex items-center gap-2">
-            <SidebarTrigger className="md:hidden" />
-          </div>
-          
-          <div className="flex items-center gap-4">
-            <div className="w-8 h-8 rounded-full bg-muted animate-pulse"></div>
-          </div>
-        </div>
-      </header>
-    );
-  }
+  const currentUser     = user || admin;
+  const displayName     = currentUser?.name  || "User";
+  const displayEmail    = currentUser?.email || "";
+  const avatarSrc       = currentUser?.avatar || "";
+  const avatarFallback  = displayName.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2);
 
   return (
-    <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50 border-l-0">
-      <div className="container flex h-16 items-center justify-between px-4">
-        <div className="flex items-center gap-2">
-          <SidebarTrigger className="md:hidden h-9 w-9" />
-        </div>
+    <>
+      <header className="h-[56px] border-b bg-background/90 sticky top-0 z-40 flex items-center px-4 gap-3">
 
-        <div className="flex items-center gap-1 sm:gap-2 md:gap-3">
-          {/* Personal Messages Button - Hidden for Admin */}
-          {userType !== 'admin' && (
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="relative h-8 w-8 sm:h-10 sm:w-10"
-              onClick={() => {
-                setSelectedConversation(null);
-                setChatDialogOpen(true);
-              }}
-            >
-              <MessagesSquare className="w-4 h-4 sm:w-5 sm:h-5" />
-              {unreadChatsCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 bg-primary rounded-full flex items-center justify-center">
-                  <span className="text-[10px] sm:text-xs text-primary-foreground font-medium">
-                    {unreadChatsCount > 99 ? '99+' : unreadChatsCount}
-                  </span>
-                </span>
-              )}
-            </Button>
+        {/* Mobile sidebar trigger */}
+        <SidebarTrigger className="md:hidden h-7 w-7 rounded-md" />
+
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* Actions */}
+        <div className="flex items-center gap-1">
+
+          {/* Messages */}
+          {userType !== "admin" && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost" size="icon"
+                  className="relative h-8 w-8 rounded-md text-muted-foreground hover:text-foreground"
+                  onClick={() => setChatOpen(true)}
+                >
+                  <MessagesSquare className="w-4 h-4" />
+                  <AnimatePresence>
+                    {unreadChats > 0 && (
+                      <motion.span
+                        initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
+                        className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-foreground rounded-full flex items-center justify-center"
+                      >
+                        <span className="text-[9px] text-background font-bold leading-none">{unreadChats > 9 ? "9+" : unreadChats}</span>
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent className="text-xs">Messages</TooltipContent>
+            </Tooltip>
           )}
 
-          {/* Notifications Dropdown - Hidden for Admin */}
-          {userType !== 'admin' && (
-            <DropdownMenu open={notificationsOpen} onOpenChange={setNotificationsOpen}>
+          {/* Notifications */}
+          {userType !== "admin" && (
+            <DropdownMenu open={notifOpen} onOpenChange={setNotifOpen}>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative h-8 w-8 sm:h-10 sm:w-10">
-                  <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
-                  {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 bg-primary rounded-full flex items-center justify-center">
-                      <span className="text-[10px] sm:text-xs text-primary-foreground font-medium">
-                        {unreadCount > 99 ? '99+' : unreadCount}
-                      </span>
-                    </span>
-                  )}
+                <Button
+                  variant="ghost" size="icon"
+                  className="relative h-8 w-8 rounded-md text-muted-foreground hover:text-foreground"
+                >
+                  <Bell className="w-4 h-4" />
+                  <AnimatePresence>
+                    {unreadCount > 0 && (
+                      <motion.span
+                        initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
+                        className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-foreground rounded-full flex items-center justify-center"
+                      >
+                        <span className="text-[9px] text-background font-bold leading-none">{unreadCount > 9 ? "9+" : unreadCount}</span>
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-80 sm:w-96 p-0">
-                <div className="flex items-center justify-between p-4 border-b">
-                  <h3 className="font-semibold">Notifications</h3>
-                  {unreadCount > 0 && (
-                    <Badge variant="secondary" className="text-xs">
-                      {unreadCount} new
-                    </Badge>
-                  )}
+
+              <DropdownMenuContent
+                align="end" sideOffset={8}
+                className="w-80 p-0 rounded-lg shadow-modal border"
+              >
+                {/* Header */}
+                <div className="modal-header !py-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="modal-header-title">Notifications</span>
+                      {unreadCount > 0 && (
+                        <span className="status-pill status-pill-default font-numeric">{unreadCount}</span>
+                      )}
+                    </div>
+                    {unreadCount > 0 && (
+                      <button
+                        onClick={markAllRead}
+                        className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors font-medium"
+                      >
+                        <CheckCheck className="w-3 h-3" />
+                        Mark all read
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <ScrollArea className="h-[400px]">
+
+                {/* Body */}
+                <ScrollArea className="h-[320px]">
                   {notifications.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-12 text-center">
-                      <Bell className="w-12 h-12 text-muted-foreground/30 mb-3" />
-                      <p className="text-sm text-muted-foreground">No notifications yet</p>
+                    <div className="flex flex-col items-center justify-center py-10">
+                      <div className="empty-state-icon mb-3">
+                        <Bell className="w-4 h-4 text-muted-foreground/40" />
+                      </div>
+                      <p className="text-sm font-medium text-muted-foreground">All caught up</p>
+                      <p className="text-xs text-muted-foreground/60 mt-0.5">No new notifications</p>
                     </div>
                   ) : (
-                    <div className="p-2">
-                      {notifications.map((notification) => (
-                        <div
-                          key={notification._id}
-                          className={`flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors hover:bg-accent ${
-                            !notification.read ? 'bg-primary/5' : ''
-                          }`}
-                          onClick={() => handleNotificationClick(notification)}
+                    <div className="p-1.5 space-y-px">
+                      {notifications.map((n) => (
+                        <button
+                          key={n._id}
+                          className={cn(
+                            "list-row w-full text-left gap-2.5",
+                            !n.read && "bg-primary/[0.04] dark:bg-primary/[0.08]"
+                          )}
+                          onClick={() => markRead(n)}
                         >
-                          <div className="flex-shrink-0 mt-1">
-                            {getNotificationIcon(notification.type)}
+                          <div className="w-7 h-7 rounded-md bg-muted flex items-center justify-center shrink-0">
+                            <NotifIcon type={n.type} />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-2">
-                              <p className={`text-sm ${!notification.read ? 'font-medium' : ''}`}>
-                                {notification.title}
+                            <div className="flex items-baseline justify-between gap-2">
+                              <p className={cn("text-[12px] truncate", !n.read ? "font-semibold text-foreground" : "text-foreground/80")}>
+                                {n.title}
                               </p>
-                              {!notification.read && (
-                                <div className="w-2 h-2 bg-primary rounded-full flex-shrink-0 mt-1"></div>
-                              )}
+                              <span className="text-[10px] font-numeric text-muted-foreground shrink-0">{relTime(n.createdAt)}</span>
                             </div>
-                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                              {notification.message}
-                            </p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {formatTimestamp(notification.createdAt)}
-                            </p>
+                            <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-1">{n.message}</p>
                           </div>
-                        </div>
+                          {!n.read && <div className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />}
+                        </button>
                       ))}
                     </div>
                   )}
                 </ScrollArea>
-                {notifications.length > 0 && (
-                  <div className="p-2 border-t">
-                    <Button
-                      variant="ghost"
-                      className="w-full text-sm"
-                      onClick={handleMarkAllAsRead}
-                    >
-                      Mark all as read
-                    </Button>
-                  </div>
-                )}
               </DropdownMenuContent>
             </DropdownMenu>
           )}
 
+          {/* Separator */}
+          <Separator orientation="vertical" className="h-5 mx-1" />
+
+          {/* Profile */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-8 w-8 sm:h-10 sm:w-10 rounded-full">
-                <div className="relative">
-                  <Avatar className="h-8 w-8 sm:h-10 sm:w-10 ring-2 ring-primary/20">
-                    <AvatarImage src={avatarSrc} alt="Profile" />
-                    <AvatarFallback className="bg-primary text-primary-foreground font-medium text-xs sm:text-sm">
-                      {avatarFallback}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="absolute bottom-0 right-0 w-2.5 h-2.5 sm:w-3 sm:h-3 bg-green-500 border-2 border-background rounded-full"></div>
-                </div>
+              <Button
+                variant="ghost"
+                className="h-8 gap-2 px-2 rounded-md font-normal hover:bg-accent"
+              >
+                <Avatar className="h-5 w-5">
+                  <AvatarImage src={avatarSrc} />
+                  <AvatarFallback className="text-[9px] font-bold bg-primary/10 text-primary">
+                    {avatarFallback}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="text-[12px] font-medium hidden sm:inline text-foreground">{displayName.split(" ")[0]}</span>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56" align="end" forceMount>
-              <DropdownMenuLabel className="font-normal">
-                <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">
-                    {displayName}
-                  </p>
-                  <p className="text-xs leading-none text-muted-foreground">
-                    {displayEmail}
-                  </p>
-                  {userType === 'admin' && (
-                    <p className="text-xs leading-none text-primary font-medium">
-                      Administrator
-                    </p>
-                  )}
+
+            <DropdownMenuContent align="end" sideOffset={8} className="w-56 p-0 rounded-lg shadow-modal border">
+              {/* Header */}
+              <div className="modal-header !py-3">
+                <div className="flex items-center gap-2.5">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={avatarSrc} />
+                    <AvatarFallback className="text-[11px] font-bold bg-primary/10 text-primary">{avatarFallback}</AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0">
+                    <p className="text-[13px] font-semibold text-foreground truncate">{displayName}</p>
+                    <p className="text-[11px] text-muted-foreground truncate">{displayEmail}</p>
+                  </div>
                 </div>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => navigate(userType === 'admin' ? '/admin/settings' : '/settings')}>
-                <User className="mr-2 h-4 w-4" />
-                <span>Profile</span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem 
-                className="text-destructive cursor-pointer"
-                onClick={handleLogout}
-              >
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>Log out</span>
-              </DropdownMenuItem>
+                {userType === "admin" && (
+                  <p className="mt-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Administrator</p>
+                )}
+              </div>
+
+              <DropdownMenuSeparator className="m-0" />
+
+              <div className="p-1">
+                <DropdownMenuItem
+                  onClick={() => navigate(userType === "admin" ? "/admin/settings" : "/settings")}
+                  className="text-[13px] gap-2 cursor-pointer rounded-md h-8"
+                >
+                  <Settings className="h-3.5 w-3.5 text-muted-foreground" />
+                  Settings
+                </DropdownMenuItem>
+              </div>
+
+              <DropdownMenuSeparator className="m-0" />
+
+              <div className="p-1">
+                <DropdownMenuItem
+                  onClick={handleLogout}
+                  className="text-[13px] gap-2 cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10 rounded-md h-8"
+                >
+                  <LogOut className="h-3.5 w-3.5" />
+                  Sign out
+                </DropdownMenuItem>
+              </div>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-      </div>
-      
-      {/* Chat Dialog Popup - Hidden for Admin */}
-      {userType !== 'admin' && (
-        <ChatDialog 
-          open={chatDialogOpen} 
-          onOpenChange={setChatDialogOpen}
+      </header>
+
+      {/* Chat Dialog */}
+      {userType !== "admin" && (
+        <ChatDialog
+          open={chatOpen}
+          onOpenChange={setChatOpen}
           conversationId={selectedConversation?._id}
           participantName={selectedConversation?.participant?.name}
           participantAvatar={selectedConversation?.participant?.avatar}
         />
       )}
-    </header>
+    </>
   );
 }

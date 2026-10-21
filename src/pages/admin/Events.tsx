@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,7 +25,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { eventService, handleApiError } from "@/services/ApiServices";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from 'sonner';
 
 interface Event {
   _id: string;
@@ -80,7 +80,6 @@ export function Events() {
   const [selectedEventTitle, setSelectedEventTitle] = useState("");
   const [activeEventPage, setActiveEventPage] = useState(0);
   const [pastEventPage, setPastEventPage] = useState(0);
-  const { toast } = useToast();
 
   // Edit Event State
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -109,11 +108,7 @@ export function Events() {
     } catch (err: any) {
       const errorInfo = handleApiError(err);
       setError(errorInfo.message);
-      toast({
-        title: "Error",
-        description: `Failed to fetch events: ${errorInfo.message}`,
-        variant: "destructive",
-      });
+      toast.error("Error", { description: `Failed to fetch events: ${errorInfo.message}` });
     } finally {
       setLoading(false);
     }
@@ -122,19 +117,11 @@ export function Events() {
   const handleDeleteEvent = async (eventId: string) => {
     try {
       await eventService.deleteEvent(eventId);
-      toast({
-        title: "Event deleted",
-        description: "Event has been successfully deleted",
-        variant: "success",
-      });
+      toast.success("Event deleted", { description: "Event has been successfully deleted" });
       fetchEvents(); // Refresh the events list
     } catch (err: any) {
       const errorInfo = handleApiError(err);
-      toast({
-        title: "Error",
-        description: `Failed to delete event: ${errorInfo.message}`,
-        variant: "destructive",
-      });
+      toast.error("Error", { description: `Failed to delete event: ${errorInfo.message}` });
     }
   };
 
@@ -184,11 +171,7 @@ export function Events() {
       };
 
       await eventService.createEvent(eventData);
-      toast({
-        title: "Event created",
-        description: "Event has been successfully created",
-        variant: "success",
-      });
+      toast.success("Event created", { description: "Event has been successfully created" });
 
       // Reset form and close dialog
       setFormData({
@@ -205,11 +188,7 @@ export function Events() {
       fetchEvents();
     } catch (err: any) {
       const errorInfo = handleApiError(err);
-      toast({
-        title: "Error",
-        description: `Failed to create event: ${errorInfo.message}`,
-        variant: "destructive",
-      });
+      toast.error("Error", { description: `Failed to create event: ${errorInfo.message}` });
     } finally {
       setIsCreating(false);
     }
@@ -271,22 +250,14 @@ export function Events() {
       };
 
       await eventService.updateEvent(editingEvent._id, eventData);
-      toast({
-        title: "Event updated",
-        description: "Event has been successfully updated",
-        variant: "success",
-      });
+      toast.success("Event updated", { description: "Event has been successfully updated" });
 
       setIsEditDialogOpen(false);
       setEditingEvent(null);
       fetchEvents();
     } catch (err: any) {
       const errorInfo = handleApiError(err);
-      toast({
-        title: "Error",
-        description: `Failed to update event: ${errorInfo.message}`,
-        variant: "destructive",
-      });
+      toast.error("Error", { description: `Failed to update event: ${errorInfo.message}` });
     } finally {
       setIsEditing(false);
     }
@@ -305,11 +276,7 @@ export function Events() {
       setSelectedEventParticipants(participants);
     } catch (err: any) {
       const errorInfo = handleApiError(err);
-      toast({
-        title: "Error",
-        description: `Failed to fetch participants: ${errorInfo.message}`,
-        variant: "destructive",
-      });
+      toast.error("Error", { description: `Failed to fetch participants: ${errorInfo.message}` });
       setSelectedEventParticipants([]);
     } finally {
       setLoadingParticipants(false);
@@ -464,7 +431,7 @@ export function Events() {
   const EventCard = ({ event, index }: { event: Event; index: number }) => (
     <Card
       key={event._id}
-      className="bento-card font-sans shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border-card-border/50 animate-fade-in relative group flex flex-col h-full"
+      className="bento-card font-sans shadow-sm hover:shadow-lg transition-colors duration-100 border-card-border/50 animate-fade-in relative group flex flex-col h-full"
       style={{ animationDelay: `${index * 100}ms` }}
     >
       <CardContent className="p-6 flex-1 flex flex-col">
@@ -528,7 +495,7 @@ export function Events() {
             </div>
           )}
           <div className="flex items-center gap-2">
-            <Users className="h-4 w-4 text-purple-500 flex-shrink-0" />
+            <Users className="h-4 w-4 text-blue-500 flex-shrink-0" />
             <span className="text-foreground font-medium truncate">
               {event.participants.length} participant{event.participants.length !== 1 ? 's' : ''}
             </span>
@@ -555,7 +522,7 @@ export function Events() {
     return (
       <div className="space-y-6 animate-in fade-in duration-500">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-500">
+        <div className="flex flex-col sm:flex-row justify-between items-start gap-3 animate-in fade-in slide-in- duration-500">
           <div className="space-y-2">
             <Skeleton className="h-8 w-56 bg-muted/60" />
             <Skeleton className="h-4 w-80 bg-muted/60" />
@@ -564,11 +531,11 @@ export function Events() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in slide-in-from-bottom-2 duration-500" style={{ animationDelay: '100ms' }}>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in slide-in- duration-500" style={{ animationDelay: '100ms' }}>
           {[0, 1, 2, 3].map((i) => (
             <div
               key={i}
-              className="rounded-2xl p-4 sm:p-5 bg-card/50 border border-border/50"
+              className="rounded-2xl p-4 sm:p-5 bg-card border border-border/50"
             >
               <div className="flex items-center justify-between">
                 <div className="space-y-3">
@@ -583,7 +550,7 @@ export function Events() {
         </div>
 
         {/* Section Title */}
-        <div className="animate-in fade-in slide-in-from-bottom-2 duration-500" style={{ animationDelay: '200ms' }}>
+        <div className="animate-in fade-in slide-in- duration-500" style={{ animationDelay: '200ms' }}>
           <Skeleton className="h-6 w-40 bg-muted/60" />
         </div>
 
@@ -592,7 +559,7 @@ export function Events() {
           {[0, 1, 2, 3, 4, 5].map((i) => (
             <div
               key={i}
-              className="rounded-2xl p-5 bg-card/50 border border-border/50 space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500"
+              className="rounded-2xl p-5 bg-card border border-border/50 space-y-4 animate-in fade-in slide-in- duration-500"
               style={{ animationDelay: `${300 + i * 50}ms` }}
             >
               <div className="flex items-start justify-between">
@@ -986,7 +953,7 @@ export function Events() {
         >
           <DialogHeader className="pb-4 border-b border-card-border/20">
             <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
+              <div className="h-12 w-12 rounded-xl from-primary/20 to-primary/10 flex items-center justify-center">
                 <Users className="h-6 w-6 text-primary" />
               </div>
               <div>
@@ -1029,7 +996,7 @@ export function Events() {
                     style={{ animationDelay: `${index * 50}ms` }}
                   >
                     <div className="flex items-center gap-4">
-                      <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary/20 to-accent/50 flex items-center justify-center overflow-hidden flex-shrink-0 ring-2 ring-background shadow-sm">
+                      <div className="h-12 w-12 rounded-xl from-primary/20 to-accent/50 flex items-center justify-center overflow-hidden flex-shrink-0 ring-2 ring-background shadow-sm">
                         {participant.avatar ? (
                           <img
                             src={participant.avatar}
@@ -1080,7 +1047,7 @@ export function Events() {
         <DialogContent className="sm:max-w-[500px] bento-card gradient-surface border-card-border/50" style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
           <DialogHeader className="pb-4 border-b border-card-border/20">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
+              <div className="h-10 w-10 rounded-xl from-primary/20 to-primary/10 flex items-center justify-center">
                 <Edit className="h-5 w-5 text-primary" />
               </div>
               <div>
@@ -1190,3 +1157,5 @@ export function Events() {
     </div>
   );
 }
+
+

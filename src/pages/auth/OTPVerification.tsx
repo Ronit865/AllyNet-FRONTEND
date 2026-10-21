@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from 'sonner';
 import { authService } from "@/services/ApiServices";
 import { handleApiError } from "@/services/ApiServices";
 
@@ -19,7 +19,6 @@ export const OTPVerification = () => {
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const navigate = useNavigate();
   const location = useLocation();
-  const { toast } = useToast();
 
   const email = location.state?.email;
   useEffect(() => {
@@ -83,11 +82,7 @@ export const OTPVerification = () => {
     const otpString = otp.join("");
 
     if (otpString.length !== 6) {
-      toast({
-        title: "Invalid OTP",
-        description: "Please enter all 6 digits.",
-        variant: "destructive",
-      });
+      toast.error("Invalid OTP", { description: "Please enter all 6 digits." });
       return;
     }
 
@@ -99,10 +94,7 @@ export const OTPVerification = () => {
    
 
       if (response && (response.success === true || response.statusCode === 200)) {
-        toast({
-          title: "OTP verified",
-          description: "Redirecting to reset password...",
-        });
+        toast.success("OTP verified", { description: "Redirecting to reset password..." });
 
         // Navigate to reset password with email and OTP
         navigate("/auth/reset-password", {
@@ -111,11 +103,7 @@ export const OTPVerification = () => {
       }
     } catch (error: any) {
       const apiError = handleApiError(error);
-      toast({
-        title: "Invalid OTP",
-        description: apiError.message || "Please check your code and try again.",
-        variant: "destructive",
-      });
+      toast.error("Invalid OTP", { description: apiError.message || "Please check your code and try again." });
     } finally {
       setIsLoading(false);
     }
@@ -131,18 +119,11 @@ export const OTPVerification = () => {
       if (response.success) {
         setTimer(60);
         setCanResend(false);
-        toast({
-          title: "OTP resent",
-          description: "A new verification code has been sent to your email.",
-        });
+        toast.success("OTP resent", { description: "A new verification code has been sent to your email." });
       }
     } catch (error: any) {
       const apiError = handleApiError(error);
-      toast({
-        title: "Error",
-        description: apiError.message || "Failed to resend OTP. Please try again.",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: apiError.message || "Failed to resend OTP. Please try again." });
     } finally {
       setIsResending(false);
     }
@@ -231,3 +212,4 @@ export const OTPVerification = () => {
     </motion.div>
   );
 };
+

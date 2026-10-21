@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { MessageCircle, MoreHorizontal, Trash2, Edit2, CornerDownRight } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { VoteButtons } from "./VoteButtons";
 import { communicationService } from "@/services/ApiServices";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from 'sonner';
 import { containsInappropriateContent } from "@/lib/contentFilter";
 
 interface CommentCardProps {
@@ -30,7 +30,6 @@ export function CommentCard({ comment, postId, onUpdate, depth = 0 }: CommentCar
   const [repliesLoaded, setRepliesLoaded] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(comment.content);
-  const { toast } = useToast();
   const userId = localStorage.getItem('userId');
 
   // Auto-load replies on mount
@@ -202,7 +201,7 @@ export function CommentCard({ comment, postId, onUpdate, depth = 0 }: CommentCar
   const shouldShowReplyButton = depth < maxDepth;
 
   return (
-    <div className="group animate-in fade-in slide-in-from-bottom-2 duration-300">
+    <div className="group animate-in fade-in slide-in- duration-300">
       <div className="flex gap-3 py-1">
         {/* Vote Section - Vertical */}
         <div className="flex-shrink-0 pt-1">
@@ -223,7 +222,7 @@ export function CommentCard({ comment, postId, onUpdate, depth = 0 }: CommentCar
             <div className="relative flex-shrink-0 mt-0.5">
               <Avatar className="w-8 h-8 border border-border/40">
                 <AvatarImage src={comment.author?.avatar} className="object-cover" />
-                <AvatarFallback className="bg-gradient-to-br from-primary/10 to-primary/20 text-primary text-xs font-semibold">
+                <AvatarFallback className=" from-primary/10 to-primary/20 text-primary text-xs font-semibold">
                   {getUserInitials(comment.author?.name || 'User')}
                 </AvatarFallback>
               </Avatar>
@@ -324,7 +323,7 @@ export function CommentCard({ comment, postId, onUpdate, depth = 0 }: CommentCar
 
           {/* Reply Box */}
           {showReplyBox && (
-            <div className="mt-3 ml-11 bg-muted/20 rounded-2xl p-3 border border-border/40 animate-in slide-in-from-top-2 duration-200">
+            <div className="mt-3 ml-11 bg-muted/20 rounded-2xl p-3 border border-border/40 animate-in slide-in- duration-200">
               <Textarea
                 placeholder="Write your reply..."
                 value={replyText}

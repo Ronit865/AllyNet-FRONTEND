@@ -19,7 +19,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
 import { jobService } from "@/services/ApiServices";
 
 interface PostJobDialogProps {
@@ -40,7 +39,6 @@ interface PostJobDialogProps {
 }
 
 export default function PostJobDialog({ open, onOpenChange, onSuccess, jobData }: PostJobDialogProps) {
-  const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     title: "",

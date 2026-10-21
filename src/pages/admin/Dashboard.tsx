@@ -1,15 +1,16 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+﻿import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Users, Calendar, IndianRupee, TrendingUp, UserCheck, Mail, Award,
   ArrowUpRight, Loader2, GraduationCap, Briefcase, ArrowRight,
-  Activity, Clock, ChevronRight, Sparkles
+  Activity, Clock, ChevronRight, Zap, MessageSquare, BarChart2,
+  UserPlus, DollarSign
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { adminService, eventService, donationService, jobService, handleApiError } from "@/services/ApiServices";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from 'sonner';
 import { Navigate, useNavigate } from "react-router-dom";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 
@@ -265,7 +266,7 @@ export function Dashboard() {
           {[0, 1, 2, 3].map((i) => (
             <div
               key={i}
-              className="rounded-2xl p-4 sm:p-5 bg-card/50 border border-border/50 animate-in fade-in slide-in-from-bottom-2 duration-500"
+              className="rounded-2xl p-4 sm:p-5 bg-card border border-border/50 animate-in fade-in slide-in-from-bottom-2 duration-500"
               style={{ animationDelay: `${i * 75}ms` }}
             >
               <div className="flex items-center justify-between">
@@ -282,7 +283,7 @@ export function Dashboard() {
 
         {/* Quick Actions */}
         <div
-          className="rounded-2xl bg-card/50 border border-border/50 p-6 animate-in fade-in slide-in-from-bottom-2 duration-500"
+          className="rounded-2xl bg-card border border-border/50 p-6 animate-in fade-in slide-in-from-bottom-2 duration-500"
           style={{ animationDelay: '300ms' }}
         >
           <Skeleton className="h-5 w-32 mb-4 bg-muted/60" />
@@ -299,7 +300,7 @@ export function Dashboard() {
         {/* Main Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div
-            className="lg:col-span-2 rounded-2xl bg-card/50 border border-border/50 p-6 animate-in fade-in slide-in-from-bottom-2 duration-500"
+            className="lg:col-span-2 rounded-2xl bg-card border border-border/50 p-6 animate-in fade-in slide-in-from-bottom-2 duration-500"
             style={{ animationDelay: '400ms' }}
           >
             <Skeleton className="h-5 w-40 mb-4 bg-muted/60" />
@@ -317,7 +318,7 @@ export function Dashboard() {
             </div>
           </div>
           <div
-            className="rounded-2xl bg-card/50 border border-border/50 p-6 animate-in fade-in slide-in-from-bottom-2 duration-500"
+            className="rounded-2xl bg-card border border-border/50 p-6 animate-in fade-in slide-in-from-bottom-2 duration-500"
             style={{ animationDelay: '500ms' }}
           >
             <Skeleton className="h-5 w-36 mb-4 bg-muted/60" />
@@ -340,11 +341,11 @@ export function Dashboard() {
   }
 
   const quickActions = [
-    { label: 'Alumni', icon: Users, route: '/admin/alumni', color: 'from-emerald-500 to-teal-500' },
-    { label: 'Events', icon: Calendar, route: '/admin/events', color: 'from-blue-500 to-cyan-500' },
-    { label: 'Donations', icon: IndianRupee, route: '/admin/donations', color: 'from-pink-500 to-rose-500' },
-    { label: 'Jobs', icon: Briefcase, route: '/admin/jobs', color: 'from-violet-500 to-purple-500' },
-    { label: 'Messages', icon: Mail, route: '/admin/communications', color: 'from-amber-500 to-orange-500' },
+    { label: 'Alumni',    icon: Users,         route: '/admin/alumni',         iconBg: 'bg-blue-100 dark:bg-blue-900/30',    iconColor: 'text-blue-600 dark:text-blue-400' },
+    { label: 'Events',    icon: Calendar,      route: '/admin/events',         iconBg: 'bg-emerald-100 dark:bg-emerald-900/30', iconColor: 'text-emerald-600 dark:text-emerald-400' },
+    { label: 'Donations', icon: IndianRupee,   route: '/admin/donations',      iconBg: 'bg-rose-100 dark:bg-rose-900/30',    iconColor: 'text-rose-600 dark:text-rose-400' },
+    { label: 'Jobs',      icon: Briefcase,     route: '/admin/jobs',           iconBg: 'bg-amber-100 dark:bg-amber-900/30',  iconColor: 'text-amber-600 dark:text-amber-400' },
+    { label: 'Messages',  icon: MessageSquare, route: '/admin/communications', iconBg: 'bg-slate-100 dark:bg-slate-800/60',  iconColor: 'text-slate-600 dark:text-slate-400' },
   ];
 
   return (
@@ -367,7 +368,7 @@ export function Dashboard() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="stats-card-orange group cursor-pointer shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1" onClick={() => navigate('/admin/alumni')}>
+        <div className="stats-card-orange group cursor-pointer shadow-md transition-colors duration-100" onClick={() => navigate('/admin/alumni')}>
           <div className="flex items-start justify-between">
             <div className="space-y-1">
               <p className="stats-card-label">Total Alumni</p>
@@ -383,7 +384,7 @@ export function Dashboard() {
           </div>
         </div>
 
-        <div className="stats-card-blue group cursor-pointer shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1" onClick={() => navigate('/admin/events')}>
+        <div className="stats-card-blue group cursor-pointer shadow-md transition-colors duration-100" onClick={() => navigate('/admin/events')}>
           <div className="flex items-start justify-between">
             <div className="space-y-1">
               <p className="stats-card-label">Total Events</p>
@@ -399,7 +400,7 @@ export function Dashboard() {
           </div>
         </div>
 
-        <div className="stats-card-pink group cursor-pointer shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1" onClick={() => navigate('/admin/donations')}>
+        <div className="stats-card-pink group cursor-pointer shadow-md transition-colors duration-100" onClick={() => navigate('/admin/donations')}>
           <div className="flex items-start justify-between">
             <div className="space-y-1">
               <p className="stats-card-label">Donations</p>
@@ -415,7 +416,7 @@ export function Dashboard() {
           </div>
         </div>
 
-        <div className="stats-card-teal group cursor-pointer shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1" onClick={() => navigate('/admin/jobs')}>
+        <div className="stats-card-teal group cursor-pointer shadow-md transition-colors duration-100" onClick={() => navigate('/admin/jobs')}>
           <div className="flex items-start justify-between">
             <div className="space-y-1">
               <p className="stats-card-label">Verified Jobs</p>
@@ -433,25 +434,25 @@ export function Dashboard() {
       </div>
 
       {/* Quick Actions */}
-      <Card className="h-full font-sans border-0 shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1 bg-card/50 backdrop-blur-sm">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-lg font-bold flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-amber-500" />
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2 text-foreground">
+            <Zap className="w-3.5 h-3.5 text-muted-foreground" />
             Quick Actions
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
             {quickActions.map((action) => (
               <button
                 key={action.label}
                 onClick={() => navigate(action.route)}
-                className="group flex flex-col items-center gap-2 p-4 rounded-2xl bg-secondary/50 hover:bg-secondary transition-all hover:scale-[1.02] active:scale-[0.98]"
+                className="group flex flex-col items-center gap-2.5 p-3 rounded-lg hover:bg-muted/60 transition-colors duration-100 active:scale-[0.97]"
               >
-                <div className={`p-3 rounded-xl bg-gradient-to-br ${action.color} text-white shadow-lg group-hover:shadow-xl transition-shadow`}>
-                  <action.icon className="w-5 h-5" />
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${action.iconBg} transition-colors duration-100`}>
+                  <action.icon className={`w-5 h-5 ${action.iconColor}`} strokeWidth={1.75} />
                 </div>
-                <span className="text-sm font-medium text-foreground">{action.label}</span>
+                <span className="text-xs font-medium text-foreground/70 group-hover:text-foreground transition-colors">{action.label}</span>
               </button>
             ))}
           </div>
@@ -461,12 +462,12 @@ export function Dashboard() {
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Upcoming Events */}
-        <Card className="h-full font-sans lg:col-span-2 border-0 shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1 bg-card/50 backdrop-blur-sm">
+        <Card className="h-full font-sans lg:col-span-2 border-0 shadow-md transition-colors duration-100 bg-card">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="text-lg font-bold flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-blue-500" />
+                  <Calendar className="w-4 h-4 text-muted-foreground" />
                   Upcoming Events
                 </CardTitle>
                 <CardDescription>Next scheduled events</CardDescription>
@@ -485,11 +486,11 @@ export function Dashboard() {
                     className="flex items-center gap-4 p-3 rounded-xl bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer"
                     onClick={() => navigate('/admin/events')}
                   >
-                    <div className="flex flex-col items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 text-white flex-shrink-0">
-                      <span className="text-xs font-medium uppercase">
+                    <div className="flex flex-col items-center justify-center w-12 h-12 rounded-lg bg-primary/10 text-primary flex-shrink-0">
+                      <span className="text-[10px] font-semibold uppercase leading-none text-primary/70">
                         {new Date(event.date).toLocaleDateString('en-US', { month: 'short' })}
                       </span>
-                      <span className="text-lg font-bold leading-none">
+                      <span className="text-base font-bold leading-tight">
                         {new Date(event.date).getDate()}
                       </span>
                     </div>
@@ -524,10 +525,10 @@ export function Dashboard() {
         </Card>
 
         {/* Recent Activity */}
-        <Card className="h-full font-sans border-0 shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1 bg-card/50 backdrop-blur-sm">
+        <Card className="">
           <CardHeader>
             <CardTitle className="text-lg font-bold flex items-center gap-2">
-              <Activity className="w-5 h-5 text-purple-500" />
+              <Activity className="w-4 h-4 text-muted-foreground" />
               Recent Activity
             </CardTitle>
             <CardDescription>Latest updates</CardDescription>
@@ -577,12 +578,12 @@ export function Dashboard() {
       {/* Bottom Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Pending Jobs Approval */}
-        <Card className="h-full font-sans lg:col-span-2 border-0 shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1 bg-card/50 backdrop-blur-sm">
+        <Card className="h-full font-sans lg:col-span-2 border-0 shadow-md transition-colors duration-100 bg-card">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="text-lg font-bold flex items-center gap-2">
-                  <Briefcase className="w-5 h-5 text-orange-500" />
+                  <Briefcase className="w-4 h-4 text-muted-foreground" />
                   Pending Approval
                 </CardTitle>
                 <CardDescription>Jobs awaiting verification</CardDescription>
@@ -641,12 +642,12 @@ export function Dashboard() {
         </Card>
 
         {/* Recent Donations */}
-        <Card className="h-full font-sans border-0 shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1 bg-card/50 backdrop-blur-sm">
+        <Card className="">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="text-lg font-bold flex items-center gap-2">
-                  <IndianRupee className="w-5 h-5 text-emerald-500" />
+                  <IndianRupee className="w-4 h-4 text-muted-foreground" />
                   Recent Donations
                 </CardTitle>
                 <CardDescription>Latest contributions</CardDescription>
@@ -702,3 +703,4 @@ export function Dashboard() {
     </div>
   );
 }
+

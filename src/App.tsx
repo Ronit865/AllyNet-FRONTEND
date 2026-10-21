@@ -1,4 +1,4 @@
-import { Toaster } from "@/components/ui/toaster";
+import { Toaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
@@ -34,23 +34,46 @@ import { Jobs as AdminJobs } from "./pages/admin/Jobs";
 import { Donations as AdminDonations } from "./pages/admin/Donations";
 import { Communications as AdminCommunications } from "./pages/admin/Communications";
 import { Reports as AdminReports } from "./pages/admin/Reports";
-// import { Analytics as AdminAnalytics } from "./pages/admin/Analytics";
 import { Settings as AdminSettings } from "./pages/admin/Settings";
 import { AuthLayout } from "./components/layout/AuthLayout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 2,
+      staleTime: 5 * 60 * 1000,
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <SocketProvider>
-        <TooltipProvider>
-          <Toaster />
+        <TooltipProvider delayDuration={300}>
+          {/* Sonner toast — replaces old Radix Toaster */}
+          <Toaster
+            position="bottom-right"
+            richColors
+            closeButton
+            duration={4000}
+            toastOptions={{
+              style: {
+                fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
+                fontSize: "0.8125rem",
+                fontWeight: "500",
+                borderRadius: "var(--radius, 0.5rem)",
+              },
+              classNames: {
+                closeButton: "!right-2 !left-auto !top-2",
+              },
+            }}
+          />
           <PWAInstallPrompt />
           <BrowserRouter>
             <Routes>
-              {/* Auth Routes - No Sidebar */}
+              {/* Auth Routes */}
               <Route path="/auth" element={<AuthLayout />}>
                 <Route path="login" element={<Login />} />
                 <Route path="forgot-password" element={<ForgotPassword />} />
@@ -58,12 +81,15 @@ const App = () => (
                 <Route path="reset-password" element={<ResetPassword />} />
               </Route>
 
-              {/* Protected User Routes - With Sidebar */}
-              <Route path="/" element={
-                <ProtectedRoute>
-                  <MainLayout />
-                </ProtectedRoute>
-              }>
+              {/* Protected User Routes */}
+              <Route
+                path="/"
+                element={
+                  <ProtectedRoute>
+                    <MainLayout />
+                  </ProtectedRoute>
+                }
+              >
                 <Route index element={<Dashboard />} />
                 <Route path="alumni" element={<Alumni />} />
                 <Route path="events" element={<Events />} />
@@ -76,12 +102,15 @@ const App = () => (
                 <Route path="settings" element={<Settings />} />
               </Route>
 
-              {/* Protected Admin Routes - With Sidebar */}
-              <Route path="/admin" element={
-                <ProtectedRoute requireAdmin={true}>
-                  <MainLayout />
-                </ProtectedRoute>
-              }>
+              {/* Protected Admin Routes */}
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedRoute requireAdmin={true}>
+                    <MainLayout />
+                  </ProtectedRoute>
+                }
+              >
                 <Route index element={<AdminDashboard />} />
                 <Route path="dashboard" element={<AdminDashboard />} />
                 <Route path="alumni" element={<AdminAlumni />} />
@@ -90,11 +119,9 @@ const App = () => (
                 <Route path="donations" element={<AdminDonations />} />
                 <Route path="communications" element={<AdminCommunications />} />
                 <Route path="reports" element={<AdminReports />} />
-                {/* <Route path="analytics" element={<AdminAnalytics />} /> */}
                 <Route path="settings" element={<AdminSettings />} />
               </Route>
 
-              {/* Catch-all route */}
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

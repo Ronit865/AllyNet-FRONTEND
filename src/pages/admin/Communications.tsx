@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,10 +7,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Mail, Send, Users, MessageSquare, Bell, TrendingUp, Eye, Calendar, Briefcase, Heart, Megaphone, Loader2 } from "lucide-react";
 import { emailService, adminService, notificationService, eventService, jobService, donationService } from "@/services/ApiServices";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from 'sonner';
 
 export function Communications() {
-  const { toast } = useToast();
   const [emailForm, setEmailForm] = useState({
     subject: "",
     body: "",
@@ -392,7 +391,7 @@ export function Communications() {
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="rounded-2xl p-4 bg-card/50 border border-border/50">
+            <div key={i} className="rounded-2xl p-4 bg-card border border-border/50">
               <div className="flex items-center justify-between">
                 <div className="space-y-3">
                   <Skeleton className="h-3 w-20 bg-muted/60" />
@@ -405,7 +404,7 @@ export function Communications() {
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="rounded-2xl bg-card/50 border border-border/50 p-6 space-y-4">
+            <div key={i} className="rounded-2xl bg-card border border-border/50 p-6 space-y-4">
               <Skeleton className="h-12 w-12 rounded-xl bg-muted/60" />
               <Skeleton className="h-5 w-32 bg-muted/60" />
               <Skeleton className="h-20 w-full rounded-lg bg-muted/60" />
@@ -502,10 +501,10 @@ export function Communications() {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Event Campaign */}
-            <div className="rounded-2xl p-5 bg-blue-500/15 border border-blue-500/30 hover:border-blue-500/50 transition-all duration-300 flex flex-col h-full">
+            <div className="rounded-2xl p-5 bg-blue-500/15 border border-blue-500/30 hover:border-blue-500/50 transition-colors duration-100 flex flex-col h-full">
               <div className="flex items-center gap-3 mb-4">
                 <div className="h-10 w-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
-                  <Calendar className="h-5 w-5 text-blue-600" />
+                  <Calendar className="h-5 w-5 text-muted-foreground" />
                 </div>
                 <h3 className="font-semibold text-lg text-blue-950 dark:text-blue-50">Events</h3>
               </div>
@@ -541,10 +540,10 @@ export function Communications() {
             </div>
 
             {/* Job Campaign */}
-            <div className="rounded-2xl p-5 bg-green-500/15 border border-green-500/30 hover:border-green-500/50 transition-all duration-300 flex flex-col h-full">
+            <div className="rounded-2xl p-5 bg-green-500/15 border border-green-500/30 hover:border-green-500/50 transition-colors duration-100 flex flex-col h-full">
               <div className="flex items-center gap-3 mb-4">
                 <div className="h-10 w-10 rounded-lg bg-green-500/20 flex items-center justify-center">
-                  <Briefcase className="h-5 w-5 text-green-600" />
+                  <Briefcase className="h-5 w-5 text-muted-foreground" />
                 </div>
                 <h3 className="font-semibold text-lg text-green-950 dark:text-green-50">Jobs</h3>
               </div>
@@ -580,19 +579,19 @@ export function Communications() {
             </div>
 
             {/* Donation Campaign */}
-            <div className="rounded-2xl p-5 bg-purple-500/15 border border-purple-500/30 hover:border-purple-500/50 transition-all duration-300 flex flex-col h-full">
+            <div className="rounded-2xl p-5 bg-blue-500/15 border border-blue-500/30 hover:border-blue-500/50 transition-colors duration-100 flex flex-col h-full">
               <div className="flex items-center gap-3 mb-4">
-                <div className="h-10 w-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
-                  <Heart className="h-5 w-5 text-purple-600" />
+                <div className="h-10 w-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                  <Heart className="h-5 w-5 text-muted-foreground" />
                 </div>
-                <h3 className="font-semibold text-lg text-purple-950 dark:text-purple-50">Donations</h3>
+                <h3 className="font-semibold text-lg text-blue-950 dark:text-blue-50">Donations</h3>
               </div>
 
               <div className="flex-1 min-h-[80px]">
                 {recentDonations.length > 0 ? (
                   <div className="space-y-3">
                     <div className="text-sm text-muted-foreground">
-                      <p className="mb-2 font-medium text-purple-900/70 dark:text-purple-100/70">{recentDonations.length} pending campaign(s):</p>
+                      <p className="mb-2 font-medium text-blue-900/70 dark:text-blue-100/70">{recentDonations.length} pending campaign(s):</p>
                       <ul className="space-y-1 text-xs">
                         {recentDonations.slice(0, 2).map((donation, idx) => (
                           <li key={idx} className="truncate">• {donation.name || donation.description}</li>
@@ -606,9 +605,9 @@ export function Communications() {
                 )}
               </div>
 
-              <div className="mt-4 pt-4 border-t border-purple-500/20">
+              <div className="mt-4 pt-4 border-t border-blue-500/20">
                 <Button
-                  className="w-full gap-2 rounded-full font-medium transition-all duration-200 bg-purple-500/10 text-purple-600 hover:bg-purple-500/25 hover:text-purple-700 border border-purple-500/20 hover:border-purple-500/40 focus-visible:ring-0 focus-visible:ring-offset-0 dark:bg-purple-500/15 dark:text-purple-400 dark:hover:bg-purple-500/30 dark:hover:text-purple-300"
+                  className="w-full gap-2 rounded-full font-medium transition-all duration-200 bg-blue-500/10 text-blue-600 hover:bg-blue-500/25 hover:text-blue-700 border border-blue-500/20 hover:border-blue-500/40 focus-visible:ring-0 focus-visible:ring-offset-0 dark:bg-blue-500/15 dark:text-blue-400 dark:hover:bg-blue-500/30 dark:hover:text-blue-300"
                   onClick={() => handleSendCampaignEmail('donation')}
                   disabled={recentDonations.length === 0 || sendingCampaign !== null}
                 >
@@ -735,7 +734,7 @@ export function Communications() {
                     switch (type) {
                       case 'event': return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
                       case 'job': return 'bg-green-500/10 text-green-500 border-green-500/20';
-                      case 'donation': return 'bg-purple-500/10 text-purple-500 border-purple-500/20';
+                      case 'donation': return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
                       case 'quick_message': return 'bg-orange-500/10 text-orange-500 border-orange-500/20';
                       default: return 'bg-gray-500/10 text-gray-500 border-gray-500/20';
                     }

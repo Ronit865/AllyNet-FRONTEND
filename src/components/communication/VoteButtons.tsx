@@ -1,8 +1,8 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { ArrowUp, ArrowDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { communicationService } from "@/services/ApiServices";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from 'sonner';
 
 interface VoteButtonsProps {
   postId?: string;
@@ -32,7 +32,6 @@ export function VoteButtons({
   );
   const [voteCount, setVoteCount] = useState(initialUpvotes - initialDownvotes);
   const [isVoting, setIsVoting] = useState(false);
-  const { toast } = useToast();
 
   const handleVote = async (voteType: 'up' | 'down') => {
     if (isVoting) return;
@@ -137,7 +136,7 @@ export function VoteButtons({
   }
 
   return (
-    <div className="flex flex-col items-center p-2 bg-gradient-to-b from-muted/50 to-muted/30 border-r border-border min-w-[48px]">
+    <div className="flex flex-col items-center p-2 from-muted/50 to-muted/30 border-r border-border min-w-[48px]">
       <Button
         variant="ghost"
         size="sm"

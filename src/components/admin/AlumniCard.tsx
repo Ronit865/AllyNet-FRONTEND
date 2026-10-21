@@ -1,4 +1,4 @@
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+﻿import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -99,7 +99,7 @@ export function AlumniCard({ alumni, onEdit, onDelete, index = 0 }: AlumniCardPr
 
   return (
     <div 
-      className="group relative bg-card/80 backdrop-blur-sm border border-border/50 rounded-2xl p-4 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 animate-fade-in"
+      className="group relative bg-card border border-border/50 rounded-2xl p-4 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 transition-colors duration-100 animate-fade-in"
       style={{ animationDelay: `${index * 50}ms` }}
     >
       {/* Header Section */}

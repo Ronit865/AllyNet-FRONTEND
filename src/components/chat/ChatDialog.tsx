@@ -1,4 +1,4 @@
-import { useState, useEffect, useLayoutEffect, useRef } from "react";
+﻿import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { Send, MoreVertical, Loader2, Trash2, ArrowLeft, Search, MessagesSquare, Check, CheckCheck } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { OnlineStatusIndicator } from "@/components/ui/online-status-indicator";
 import { messageService, userService } from "@/services/ApiServices";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { useSocket } from "@/hooks/useSocket";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { containsInappropriateContent } from "@/lib/contentFilter";
@@ -75,7 +75,6 @@ export function ChatDialog({
   const [showConversationList, setShowConversationList] = useState(!initialConversationId && !userId);
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
   const [typingTimeout, setTypingTimeout] = useState<NodeJS.Timeout | null>(null);
-  const { toast } = useToast();
   const { socket, onlineUsers } = useSocket();
   const isParticipantOnline = useOnlineStatus(participant._id);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -361,21 +360,15 @@ export function ChatDialog({
       const response = await messageService.sendMessage(conversationId, optimisticMessage.content);
       const newMsg = response?.data;
       if (newMsg) {
-        // Replace optimistic message with real one and mark as delivered
-        setMessages(prev => prev.map(m => 
-          m._id === optimisticMessage._id 
+        setMessages(prev => prev.map(m =>
+          m._id === optimisticMessage._id
             ? { ...newMsg, delivered: true, deliveredAt: new Date().toISOString() }
             : m
         ));
       }
     } catch (error: any) {
-      // Remove optimistic message on error
       setMessages(prev => prev.filter(m => m._id !== optimisticMessage._id));
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.response?.data?.message || "Failed to send message"
-      });
+      toast.error("Failed to send message", { description: error.response?.data?.message });
     }
   };
 
@@ -383,10 +376,7 @@ export function ChatDialog({
     // Immediately remove message from UI for instant feedback
     setMessages(prev => prev.filter(m => m._id !== messageId));
 
-    toast({
-      title: "Success",
-      description: "Message deleted successfully"
-    });
+    toast("Success", { description: "Message deleted successfully" });
 
     // Call API in background
     try {
@@ -432,76 +422,72 @@ export function ChatDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] sm:w-[90vw] max-w-[95vw] sm:max-w-[80vw] md:max-w-[600px] h-[85vh] sm:h-[80vh] max-h-[85vh] sm:max-h-[80vh] p-0 flex flex-col backdrop-blur-sm border-border/50 shadow-2xl">
+      <DialogContent className="w-[95vw] sm:w-[560px] max-w-[95vw] h-[85vh] max-h-[85vh] p-0 flex flex-col gap-0 overflow-hidden">
         {showConversationList ? (
           <>
-            {/* Conversations List Header */}
-            <DialogHeader className="px-4 sm:px-6 py-3 sm:py-4 border-b flex-shrink-0">
-              <DialogTitle className="text-base sm:text-lg font-semibold">Personal Messages</DialogTitle>
-            </DialogHeader>
+            {/* ── List Header ── */}
+            <div className="flex items-center gap-3 px-4 py-3 border-b flex-shrink-0">
+              <MessagesSquare className="w-4 h-4 text-muted-foreground" />
+              <h2 className="text-sm font-semibold">Messages</h2>
+            </div>
 
-            {/* Search */}
-            <div className="px-4 sm:px-6 py-2 sm:py-3 border-b flex-shrink-0">
+            {/* ── Search ── */}
+            <div className="px-4 py-2.5 border-b flex-shrink-0">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
                 <Input
-                  placeholder="Search conversations..."
+                  placeholder="Search conversations…"
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 h-9 sm:h-10 text-sm"
+                  onChange={e => setSearchQuery(e.target.value)}
+                  className="pl-9 h-8 text-sm bg-muted/50 border-transparent focus:bg-background focus:border-border"
                 />
               </div>
             </div>
 
-            {/* Conversations List */}
+            {/* ── Conversation list ── */}
             <ScrollArea className="flex-1">
               {loading ? (
-                <div className="flex items-center justify-center h-full py-20">
-                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                <div className="flex items-center justify-center py-16">
+                  <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
                 </div>
               ) : filteredConversations.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full py-20">
-                  <MessagesSquare className="w-12 h-12 text-muted-foreground/30 mb-3" />
-                  <p className="text-muted-foreground text-sm">No conversations yet</p>
+                <div className="flex flex-col items-center justify-center py-16 gap-3">
+                  <MessagesSquare className="w-10 h-10 text-muted-foreground/30" />
+                  <p className="text-sm text-muted-foreground">No conversations yet</p>
                 </div>
               ) : (
-                <div className="divide-y">
-                  {filteredConversations.map((conv) => {
+                <div>
+                  {filteredConversations.map(conv => {
                     const isOnline = onlineUsers.has(conv.participant?._id);
                     return (
-                      <div
+                      <button
                         key={conv._id}
                         onClick={() => handleSelectConversation(conv)}
-                        className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 hover:bg-accent cursor-pointer transition-colors active:bg-accent/80"
+                        className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-muted/50 transition-colors duration-100 border-b border-border/40 last:border-0"
                       >
-                        <div className="relative">
-                          <Avatar className="w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0">
+                        <div className="relative flex-shrink-0">
+                          <Avatar className="w-10 h-10">
                             <AvatarImage src={conv.participant?.avatar} />
-                            <AvatarFallback className="bg-primary/20 text-primary font-medium text-sm sm:text-base">
-                              {conv.participant?.name?.split(' ').map(n => n[0]).join('') || 'U'}
+                            <AvatarFallback className="bg-muted text-foreground text-xs font-medium">
+                              {conv.participant?.name?.split(' ').map((n: string) => n[0]).join('') || 'U'}
                             </AvatarFallback>
                           </Avatar>
                           <OnlineStatusIndicator online={isOnline} size="sm" position="bottom-right" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-2">
-                              <p className="font-medium truncate text-sm sm:text-base">{conv.participant?.name}</p>
-                              {isOnline && (
-                                <span className="text-[10px] text-green-500 font-medium">•</span>
-                              )}
-                            </div>
+                          <div className="flex items-center justify-between gap-2 mb-0.5">
+                            <p className="text-sm font-medium truncate">{conv.participant?.name}</p>
                             {conv.lastMessage?.createdAt && (
-                              <span className="text-[10px] sm:text-xs text-muted-foreground flex-shrink-0">
+                              <span className="text-[11px] text-muted-foreground flex-shrink-0">
                                 {getTimeAgo(conv.lastMessage.createdAt)}
                               </span>
                             )}
                           </div>
-                          <p className="text-xs sm:text-sm text-muted-foreground truncate">
+                          <p className="text-xs text-muted-foreground truncate">
                             {conv.lastMessage?.content || 'No messages yet'}
                           </p>
                         </div>
-                      </div>
+                      </button>
                     );
                   })}
                 </div>
@@ -510,168 +496,169 @@ export function ChatDialog({
           </>
         ) : (
           <>
-            {/* Chat Header */}
-            <DialogHeader className="px-3 sm:px-6 py-3 sm:py-4 border-b flex-shrink-0">
-              <div className="flex items-center gap-2 sm:gap-3">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleBackToList}
-                  className="h-8 w-8 flex-shrink-0"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                </Button>
-                <div className="relative">
-                  <Avatar className="w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0">
-                    <AvatarImage src={participant.avatar} />
-                    <AvatarFallback className="bg-primary/20 text-primary font-medium text-sm">
-                      {participant.name?.split(' ').map(n => n[0]).join('') || 'U'}
-                    </AvatarFallback>
-                  </Avatar>
-                  <OnlineStatusIndicator online={isParticipantOnline} size="sm" position="bottom-right" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <DialogTitle className="text-base sm:text-lg font-semibold truncate">{participant.name || 'Chat'}</DialogTitle>
-                  {isParticipantOnline && (
-                    <p className="text-xs text-green-500">Online</p>
-                  )}
-                </div>
+            {/* ── Chat Header ── */}
+            <div className="flex items-center gap-3 px-4 py-3 border-b flex-shrink-0 bg-card">
+              <Button variant="ghost" size="icon" onClick={handleBackToList} className="h-8 w-8 flex-shrink-0 -ml-1">
+                <ArrowLeft className="w-4 h-4" />
+              </Button>
+              <div className="relative flex-shrink-0">
+                <Avatar className="w-8 h-8">
+                  <AvatarImage src={participant.avatar} />
+                  <AvatarFallback className="bg-muted text-xs font-medium">
+                    {participant.name?.split(' ').map(n => n[0]).join('') || 'U'}
+                  </AvatarFallback>
+                </Avatar>
+                <OnlineStatusIndicator online={isParticipantOnline} size="sm" position="bottom-right" />
               </div>
-            </DialogHeader>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold truncate leading-none">{participant.name || 'Chat'}</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  {isParticipantOnline ? <span className="text-emerald-500 font-medium">Online</span> : 'Offline'}
+                </p>
+              </div>
+            </div>
 
-            {/* Messages */}
-            <ScrollArea ref={scrollRef} className="flex-1 px-3 sm:px-6 py-3 sm:py-4">
+            {/* ── Messages ── */}
+            <ScrollArea ref={scrollRef} className="flex-1 px-4 py-3">
               {loading ? (
                 <div className="flex items-center justify-center h-full">
-                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                  <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
                 </div>
               ) : messages.length === 0 ? (
-                <div className="flex items-center justify-center h-full">
-                  <p className="text-muted-foreground text-sm text-center px-4">No messages yet. Start the conversation!</p>
+                <div className="flex flex-col items-center justify-center h-full gap-3 text-center">
+                  <MessagesSquare className="w-10 h-10 text-muted-foreground/25" />
+                  <p className="text-sm text-muted-foreground">Start the conversation</p>
                 </div>
               ) : (
-                <div className="space-y-3 sm:space-y-4">
+                <div className="space-y-1">
                   {messages.map((message, index) => {
                     const isMe = message.sender._id === currentUser?._id;
                     const canDelete = isMe && canDeleteMessage(message.createdAt);
-                    const showAvatar = !isMe && (index === messages.length - 1 || messages[index + 1]?.sender._id !== message.sender._id);
                     const isFirstInGroup = index === 0 || messages[index - 1]?.sender._id !== message.sender._id;
                     const isLastInGroup = index === messages.length - 1 || messages[index + 1]?.sender._id !== message.sender._id;
+                    const showAvatar = !isMe && isLastInGroup;
 
                     return (
                       <div
                         key={message._id}
-                        className={`flex ${isMe ? "justify-end" : "justify-start"} will-change-transform animate-in fade-in slide-in-from-bottom-2 duration-300`}
+                        className={`flex ${isMe ? 'justify-end' : 'justify-start'} ${
+                          isFirstInGroup ? 'mt-3' : 'mt-0.5'
+                        }`}
                       >
-                        <div className={`flex items-end gap-1.5 max-w-[85%] sm:max-w-[70%] group ${isMe ? "flex-row" : "flex-row-reverse"}`}>
-                          <div className="relative">
-                            <div 
-                              className={`rounded-2xl px-3 sm:px-4 py-2 shadow-sm ${
-                                isMe
-                                  ? "bg-primary text-primary-foreground rounded-tr-sm" 
-                                  : "bg-muted rounded-tl-sm"
-                              } ${
-                                isFirstInGroup ? (isMe ? "rounded-tr-2xl" : "rounded-tl-2xl") : ""
-                              } ${
-                                isLastInGroup ? (isMe ? "rounded-br-2xl" : "rounded-bl-2xl") : ""
-                              }`}
-                            >
-                              <p className="text-sm break-words leading-relaxed">{message.content}</p>
-                              <div className="flex items-center gap-1 justify-end mt-1">
-                                <p className={`text-[10px] sm:text-xs ${
-                                  isMe ? "text-primary-foreground/70" : "text-muted-foreground"
-                                }`}>
-                                  {getMessageTime(message.createdAt)}
-                                </p>
-                                {isMe && (
-                                  <span className="flex items-center">
-                                    {message.read ? (
-                                      <CheckCheck className={`w-3.5 h-3.5 ${
-                                        message.readAt ? "text-blue-400" : "text-primary-foreground/70"
-                                      }`} />
-                                    ) : message.delivered ? (
-                                      <CheckCheck className="w-3.5 h-3.5 text-primary-foreground/70" />
-                                    ) : (
-                                      <Check className="w-3.5 h-3.5 text-primary-foreground/70" />
-                                    )}
-                                  </span>
-                                )}
-                              </div>
+                        {/* Avatar placeholder for incoming */}
+                        {!isMe && (
+                          <div className="w-7 flex-shrink-0 mr-2 flex items-end">
+                            {showAvatar ? (
+                              <Avatar className="w-6 h-6">
+                                <AvatarImage src={message.sender.avatar} />
+                                <AvatarFallback className="text-[9px] bg-muted">
+                                  {message.sender.name.split(' ').map(n => n[0]).join('')}
+                                </AvatarFallback>
+                              </Avatar>
+                            ) : null}
+                          </div>
+                        )}
+
+                        <div className={`flex items-end gap-1.5 max-w-[75%] group ${ isMe ? 'flex-row-reverse' : 'flex-row' }`}>
+                          {/* Bubble */}
+                          <div
+                            className={`px-3 py-2 text-sm leading-relaxed shadow-xs ${
+                              isMe
+                                ? `bg-primary text-primary-foreground ${
+                                    isFirstInGroup ? 'rounded-tl-2xl rounded-tr-lg' : 'rounded-tl-2xl rounded-tr-2xl'
+                                  } ${ isLastInGroup ? 'rounded-bl-2xl rounded-br-md' : 'rounded-bl-2xl rounded-br-2xl' }`
+                                : `bg-muted text-foreground ${
+                                    isFirstInGroup ? 'rounded-tl-lg rounded-tr-2xl' : 'rounded-tl-2xl rounded-tr-2xl'
+                                  } ${ isLastInGroup ? 'rounded-bl-md rounded-br-2xl' : 'rounded-bl-2xl rounded-br-2xl' }`
+                            }`}
+                          >
+                            <p className="break-words">{message.content}</p>
+                            {/* Meta row */}
+                            <div className={`flex items-center gap-1 mt-1 ${ isMe ? 'justify-end' : 'justify-start' }`}>
+                              <span className={`text-[10px] ${ isMe ? 'text-primary-foreground/60' : 'text-muted-foreground' }`}>
+                                {getMessageTime(message.createdAt)}
+                              </span>
+                              {isMe && (
+                                <span>
+                                  {message.read ? (
+                                    <CheckCheck className={`w-3 h-3 ${ message.readAt ? 'text-sky-300' : 'text-primary-foreground/60' }`} />
+                                  ) : message.delivered ? (
+                                    <CheckCheck className="w-3 h-3 text-primary-foreground/60" />
+                                  ) : (
+                                    <Check className="w-3 h-3 text-primary-foreground/50" />
+                                  )}
+                                </span>
+                              )}
                             </div>
                           </div>
+
+                          {/* Delete menu — only my messages */}
                           {isMe && (
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="opacity-0 group-hover:opacity-100 sm:transition-opacity h-6 w-6 mb-1 touch-manipulation"
+                                  variant="ghost" size="icon"
+                                  className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
                                 >
-                                  <MoreVertical className="w-4 h-4 text-muted-foreground" />
+                                  <MoreVertical className="w-3.5 h-3.5 text-muted-foreground" />
                                 </Button>
                               </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
+                              <DropdownMenuContent align="end" className="w-36">
                                 <DropdownMenuItem
                                   onClick={() => handleDeleteMessage(message._id)}
                                   disabled={!canDelete}
-                                  className="text-destructive focus:text-destructive cursor-pointer"
+                                  className="text-destructive focus:text-destructive text-sm cursor-pointer"
                                 >
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  {canDelete ? "Delete message" : "Delete (expired)"}
+                                  <Trash2 className="mr-2 h-3.5 w-3.5" />
+                                  {canDelete ? 'Delete' : 'Expired'}
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
-                          )}
-                          {!isMe && showAvatar && (
-                            <Avatar className="w-6 h-6 sm:w-8 sm:h-8 flex-shrink-0">
-                              <AvatarImage src={message.sender.avatar} />
-                              <AvatarFallback className="bg-primary/20 text-primary text-[10px] sm:text-xs">
-                                {message.sender.name.split(' ').map(n => n[0]).join('')}
-                              </AvatarFallback>
-                            </Avatar>
-                          )}
-                          {!isMe && !showAvatar && (
-                            <div className="w-6 sm:w-8" />
                           )}
                         </div>
                       </div>
                     );
                   })}
+
+                  {/* Typing indicator */}
                   {typingUsers.size > 0 && (
-                    <div className="flex items-center gap-2 px-4 py-2">
-                      <div className="flex items-center gap-1 px-3 py-2 bg-muted rounded-full w-fit">
-                        <div className="flex gap-1">
-                          <div className="w-2 h-2 bg-primary rounded-full animate-bounce [animation-delay:0ms]" />
-                          <div className="w-2 h-2 bg-primary rounded-full animate-bounce [animation-delay:150ms]" />
-                          <div className="w-2 h-2 bg-primary rounded-full animate-bounce [animation-delay:300ms]" />
-                        </div>
-                        <span className="text-xs text-muted-foreground ml-1">typing...</span>
+                    <div className="flex items-end gap-2 mt-3">
+                      <div className="w-6 h-6 flex-shrink-0" />
+                      <div className="bg-muted rounded-2xl rounded-bl-sm px-3 py-2.5 flex gap-1 items-center">
+                        {[0, 150, 300].map(delay => (
+                          <span
+                            key={delay}
+                            className="w-1.5 h-1.5 rounded-full bg-muted-foreground/60 animate-typing-dot"
+                            style={{ animationDelay: `${delay}ms` }}
+                          />
+                        ))}
                       </div>
                     </div>
                   )}
+
                   <div ref={messagesEndRef} />
                 </div>
               )}
             </ScrollArea>
 
-            {/* Input */}
-            <div className="px-3 sm:px-6 py-3 sm:py-4 border-t flex-shrink-0">
+            {/* ── Input footer ── */}
+            <div className="px-4 py-3 border-t bg-card flex-shrink-0">
               <div className="flex items-center gap-2">
                 <Input
-                  placeholder="Type a message..."
+                  placeholder="Message…"
                   value={newMessage}
                   onChange={handleMessageInputChange}
-                  onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
+                  onKeyPress={e => e.key === 'Enter' && handleSendMessage()}
                   disabled={!conversationId}
-                  className="flex-1 h-9 sm:h-10 text-sm"
+                  className="flex-1 h-9 text-sm bg-muted/50 border-transparent focus:bg-background focus:border-border"
                 />
                 <Button
                   onClick={handleSendMessage}
                   disabled={!newMessage.trim() || !conversationId}
                   size="icon"
-                  className="h-9 w-9 sm:h-10 sm:w-10 flex-shrink-0"
+                  className="h-9 w-9 flex-shrink-0"
                 >
-                  <Send className="w-4 h-4" />
+                  <Send className="w-3.5 h-3.5" />
                 </Button>
               </div>
             </div>

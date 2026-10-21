@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+﻿import { useState, useRef } from "react";
 import { Send, ImageIcon, BarChart3, Link2, Bold, Italic, Code, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from 'sonner';
 import { communicationService } from "@/services/ApiServices";
 import { containsInappropriateContent } from "@/lib/contentFilter";
 
@@ -35,18 +35,13 @@ export function PostComposer({ onPostCreated }: PostComposerProps) {
   const [images, setImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
 
     if (images.length + files.length > 5) {
-      toast({
-        title: "Too many images",
-        description: "You can upload a maximum of 5 images per post.",
-        variant: "destructive",
-      });
+      toast.error("Max 5 images per post");
       return;
     }
 
@@ -70,21 +65,12 @@ export function PostComposer({ onPostCreated }: PostComposerProps) {
 
   const handleSubmit = async () => {
     if (!content.trim() || !selectedCategory) {
-      toast({
-        title: "Missing fields",
-        description: "Please fill in all required fields.",
-        variant: "destructive",
-      });
+      toast.error("Please fill in content and select a category");
       return;
     }
 
-    // Check for inappropriate content
     if (containsInappropriateContent(content)) {
-      toast({
-        title: "Inappropriate Content Detected",
-        description: "Your post contains offensive language. Please remove inappropriate words and try again.",
-        variant: "destructive",
-      });
+      toast.error("Inappropriate content detected", { description: "Please remove offensive language and try again." });
       return;
     }
 
@@ -103,35 +89,19 @@ export function PostComposer({ onPostCreated }: PostComposerProps) {
       const response = await communicationService.createPost(formData);
 
       if (response.success) {
-        toast({
-          title: "Post published!",
-          description: "Your post has been shared with the community.",
-        });
-
-        // Reset form
-        setContent("");
-        setSelectedCategory("");
-        setImages([]);
-        setImagePreviews([]);
-
-        // Notify parent
-        if (onPostCreated) {
-          onPostCreated();
-        }
+        toast.success("Post published!");
+        setContent(""); setSelectedCategory(""); setImages([]); setImagePreviews([]);
+        if (onPostCreated) onPostCreated();
       }
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create post. Please try again.",
-        variant: "destructive",
-      });
+      toast.error("Failed to post", { description: error.message });
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <Card className="overflow-hidden rounded-3xl border border-border/60 bg-gradient-to-br from-card to-muted/20 shadow-sm">
+    <Card className="overflow-hidden surface-card">
       <CardContent className="p-4 sm:p-5">
         <div className="flex gap-3 sm:gap-4">
           <div className="relative flex-shrink-0">
@@ -148,7 +118,7 @@ export function PostComposer({ onPostCreated }: PostComposerProps) {
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <span className="text-xs sm:text-sm font-medium text-muted-foreground">Post to:</span>
               <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger className="w-[140px] sm:w-40 h-8 text-xs sm:text-sm rounded-full border-border/60 bg-background/50 backdrop-blur-sm focus:ring-primary/20">
+                <SelectTrigger className="w-[140px] sm:w-40 h-8 text-xs sm:text-sm rounded-full border-border/60 bg-background/50 focus:ring-primary/20">
                   <SelectValue placeholder="Choose category" />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">

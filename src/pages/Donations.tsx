@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { InfoTag } from '@/components/ui/InfoTag';
 import { donationService } from '@/services/ApiServices';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { Heart, Target, TrendingUp, Loader2, ChevronLeft, ChevronRight, CheckCircle } from 'lucide-react';
 import { cache, CACHE_KEYS, CACHE_TTL } from '@/lib/cache';
 
@@ -25,7 +25,7 @@ interface DonationCampaign {
 const ITEMS_PER_PAGE = 6;
 
 export default function Donations() {
-  const { toast } = useToast();
+
   const [campaigns, setCampaigns] = useState<DonationCampaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [contributeDialogOpen, setContributeDialogOpen] = useState(false);
@@ -52,10 +52,10 @@ export default function Donations() {
         setCampaigns(response.data);
         cache.set(CACHE_KEYS.USER_DONATIONS, response.data, CACHE_TTL.MEDIUM);
       } else {
-        toast({ title: "Error", description: response.message || 'Failed to fetch donation campaigns', variant: "destructive" });
+        toast.error("Error", { description: response.message || 'Failed to fetch donation campaigns' });
       }
     } catch (error: any) {
-      toast({ title: "Error", description: error.message || 'Failed to load donation campaigns', variant: "destructive" });
+      toast.error("Error", { description: error.message || 'Failed to load donation campaigns' });
     } finally {
       setLoading(false);
     }
@@ -73,13 +73,13 @@ export default function Donations() {
 
   const submitContribution = async () => {
     if (!selectedCampaign || !contributionAmount) {
-      toast({ title: "Error", description: 'Please enter a valid amount', variant: "destructive" });
+      toast.error("Please enter a valid amount");
       return;
     }
 
     const amount = parseFloat(contributionAmount);
     if (isNaN(amount) || amount <= 0) {
-      toast({ title: "Error", description: 'Please enter a valid amount', variant: "destructive" });
+      toast.error("Please enter a valid amount");
       return;
     }
 
@@ -88,15 +88,15 @@ export default function Donations() {
       const response = await donationService.contributeToCampaign(selectedCampaign._id, amount);
 
       if (response.success) {
-        toast({ title: "Success", description: `Successfully contributed ₹${amount}!`, variant: "success" });
+        toast.success(`Contributed ₹${amount}!`, { description: "Thank you for your support." });
         setContributeDialogOpen(false);
         setContributionAmount('');
         fetchCampaigns();
       } else {
-        toast({ title: "Error", description: response.message || 'Failed to contribute', variant: "destructive" });
+        toast.error("Contribution failed", { description: response.message });
       }
     } catch (error: any) {
-      toast({ title: "Error", description: error.message || 'Failed to process contribution', variant: "destructive" });
+      toast.error("Contribution failed", { description: error.message });
     } finally {
       setContributing(false);
     }
@@ -227,7 +227,7 @@ export default function Donations() {
       {[0, 1, 2, 3, 4, 5].map((i) => (
         <div
           key={i}
-          className="rounded-2xl bg-card border border-border/50 p-4 sm:p-5 space-y-3 sm:space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300"
+          className="rounded-2xl bg-card border border-border/50 p-4 sm:p-5 space-y-3 sm:space-y-4 animate-in fade-in slide-in- duration-300"
           style={{ animationDelay: `${i * 40}ms` }}
         >
           <div className="flex items-center gap-2">
@@ -270,7 +270,7 @@ export default function Donations() {
       {/* Active Donations Section */}
       <div>
         <div className="flex items-center gap-2 mb-4">
-          <Heart className="h-5 w-5 text-red-500" />
+          <Heart className="h-5 w-5 text-muted-foreground" />
           <h2 className="text-lg sm:text-xl font-semibold text-foreground">
             Active Donations {!loading && `(${activeCampaigns.length})`}
           </h2>
@@ -309,7 +309,7 @@ export default function Donations() {
       {!loading && (
         <div>
           <div className="flex items-center gap-2 mb-4">
-            <CheckCircle className="h-5 w-5 text-emerald-500" />
+            <CheckCircle className="h-5 w-5 text-muted-foreground" />
             <h2 className="text-lg sm:text-xl font-semibold text-foreground">
               Completed Donations ({completedCampaigns.length})
             </h2>
@@ -345,70 +345,70 @@ export default function Donations() {
 
       {/* Contribution Dialog */}
       <Dialog open={contributeDialogOpen} onOpenChange={setContributeDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Contribute to {selectedCampaign?.name}</DialogTitle>
-            <DialogDescription>
-              Every contribution makes a difference. Thank you for your support!
+        <DialogContent className="p-0 gap-0 max-w-sm rounded-lg border shadow-modal overflow-hidden">
+          {/* Header */}
+          <DialogHeader className="modal-header">
+            <DialogTitle className="modal-header-title">Contribute to campaign</DialogTitle>
+            <DialogDescription className="modal-header-desc mt-1">
+              {selectedCampaign?.name} — every amount makes a difference.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="amount">Contribution Amount (₹)</Label>
+          {/* Body */}
+          <div className="modal-body space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="amount" className="text-[12px] font-medium text-foreground">Amount (₹)</Label>
               <div className="flex gap-2">
                 <Input
                   id="amount"
                   type="number"
-                  placeholder="Enter amount"
+                  placeholder="e.g. 500"
                   value={contributionAmount}
                   onChange={(e) => setContributionAmount(e.target.value)}
                   min="1"
-                  step="0.01"
-                  className="flex-1"
+                  step="1"
+                  className="flex-1 h-9 text-sm font-numeric"
                 />
                 {selectedCampaign && (selectedCampaign.goal ?? 0) > (selectedCampaign.raisedAmount ?? 0) && (
                   <Button
-                    type="button"
-                    variant="outline"
+                    type="button" variant="outline" size="sm"
                     onClick={() => {
-                      const remaining = (selectedCampaign.goal ?? 0) - (selectedCampaign.raisedAmount ?? 0);
-                      setContributionAmount(remaining.toString());
+                      const rem = (selectedCampaign.goal ?? 0) - (selectedCampaign.raisedAmount ?? 0);
+                      setContributionAmount(rem.toString());
                     }}
-                    className="shrink-0"
+                    className="h-9 text-xs"
                   >
-                    Max
+                    Fill gap
                   </Button>
                 )}
               </div>
             </div>
 
             {selectedCampaign && (
-              <div className="p-4 bg-muted rounded-lg space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Campaign Goal:</span>
-                  <span className="font-semibold text-foreground">₹{(selectedCampaign.goal ?? 0).toLocaleString()}</span>
+              <div className="rounded-md border bg-muted/40 divide-y text-[12px]">
+                <div className="flex justify-between px-3 py-2">
+                  <span className="text-muted-foreground">Goal</span>
+                  <span className="font-numeric font-semibold text-foreground">₹{(selectedCampaign.goal ?? 0).toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Amount Raised:</span>
-                  <span className="font-semibold text-foreground">₹{(selectedCampaign.raisedAmount ?? 0).toLocaleString()}</span>
+                <div className="flex justify-between px-3 py-2">
+                  <span className="text-muted-foreground">Raised so far</span>
+                  <span className="font-numeric font-semibold text-foreground">₹{(selectedCampaign.raisedAmount ?? 0).toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Remaining:</span>
-                  <span className="font-semibold text-primary">
-                    ₹{((selectedCampaign.goal ?? 0) - (selectedCampaign.raisedAmount ?? 0)).toLocaleString()}
-                  </span>
+                <div className="flex justify-between px-3 py-2">
+                  <span className="text-muted-foreground">Remaining</span>
+                  <span className="font-numeric font-semibold text-foreground">₹{((selectedCampaign.goal ?? 0) - (selectedCampaign.raisedAmount ?? 0)).toLocaleString()}</span>
                 </div>
               </div>
             )}
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setContributeDialogOpen(false)}>
+          {/* Footer */}
+          <DialogFooter className="modal-footer">
+            <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setContributeDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={submitContribution} disabled={contributing}>
-              {contributing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <Button size="sm" className="h-8 text-xs" onClick={submitContribution} disabled={contributing}>
+              {contributing && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
               Contribute
             </Button>
           </DialogFooter>
@@ -417,3 +417,4 @@ export default function Donations() {
     </div>
   );
 }
+

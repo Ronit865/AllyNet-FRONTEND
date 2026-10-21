@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { authService, handleApiError, handleApiSuccess } from "@/services/ApiServices";
 import { useAuth } from "@/context/AuthContext";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from 'sonner';
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -27,7 +27,6 @@ export const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { login } = useAuth();
-  const { toast } = useToast();
 
   const form = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
@@ -59,18 +58,13 @@ export const Login = () => {
         // Update AuthContext with user data
         login(response.data);
 
-        // Success toast
-        toast({
-          title: "Login successful!",
-          description: successData.message || "Welcome back to AllyNet!",
-          variant: "success",
-        });
+        toast.success("Welcome back!");
 
-        // Get intended destination or default route
         const from = location.state?.from?.pathname;
-        const userType = response.data?.userType || (response.data?.user?.role === 'admin' ? 'admin' : 'user');
+        const role = response.data?.user?.role;
+        const isAdmin = role === 'admin' || role === 'superadmin';
+        const userType = response.data?.userType || (isAdmin ? 'admin' : 'user');
 
-        // Role-based redirection
         if (userType === 'admin') {
           navigate(from && from.startsWith('/admin') ? from : '/admin', { replace: true });
         } else {
@@ -80,13 +74,8 @@ export const Login = () => {
     } catch (error: any) {
       const apiError = handleApiError(error);
 
-      setLoginError("Invalid credentials"); // Set inline error
-
-      toast({
-        variant: "destructive",
-        title: "Invalid credentials",
-        description: "Please check your email and password.",
-      });
+      setLoginError("Invalid email or password");
+      toast.error("Invalid credentials", { description: "Please check your email and password." });
     } finally {
       setIsLoading(false);
     }

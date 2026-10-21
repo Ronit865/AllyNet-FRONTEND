@@ -148,7 +148,7 @@ export const adminService = {
   },
 
   forgotPassword: async (email: string): Promise<ApiResponse> => {
-    return await api.post('/admin/change-password', { email });
+    return await api.post('/forgot-password', { email });
   },
 
   verifyOTP: async (email: string, otp: string): Promise<ApiResponse> => {
@@ -273,7 +273,7 @@ export const donationService = {
 
   getRecentDonors: async (): Promise<ApiResponse> => {
     try {
-      const response = await api.get('/donations/getRecentDonors');
+      const response = await api.get('/donations/recent-donors');
       return response || response.data;
     } catch (error) {
       throw error;
@@ -555,7 +555,7 @@ export const notificationService = {
   },
 
   getUnreadCount: async (): Promise<ApiResponse> => {
-    return await api.get('/notifications/unread-count');
+    return await api.get('/notifications/unread/count');
   },
 
   markAsRead: async (notificationId: string): Promise<ApiResponse> => {
@@ -596,15 +596,15 @@ export const connectionService = {
   },
 
   getPendingRequests: async (): Promise<ApiResponse> => {
-    return await api.get('/connections/pending');
+    return await api.get('/connections/requests');
   },
 
   acceptConnectionRequest: async (connectionId: string): Promise<ApiResponse> => {
-    return await api.patch(`/connections/${connectionId}/accept`);
+    return await api.post(`/connections/accept/${connectionId}`);
   },
 
   rejectConnectionRequest: async (connectionId: string): Promise<ApiResponse> => {
-    return await api.patch(`/connections/${connectionId}/reject`);
+    return await api.post(`/connections/reject/${connectionId}`);
   },
 
   removeConnection: async (connectionId: string): Promise<ApiResponse> => {
