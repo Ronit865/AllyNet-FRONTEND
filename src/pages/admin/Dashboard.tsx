@@ -6,7 +6,7 @@ import {
   Users, Calendar, IndianRupee, TrendingUp, UserCheck, Mail, Award,
   ArrowUpRight, Loader2, GraduationCap, Briefcase, ArrowRight,
   Activity, Clock, ChevronRight, Zap, MessageSquare, BarChart2,
-  UserPlus, DollarSign, RefreshCw
+  UserPlus, RefreshCw
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { adminService, eventService, donationService, jobService, handleApiError } from "@/services/ApiServices";

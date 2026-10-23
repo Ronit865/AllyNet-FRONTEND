@@ -8,13 +8,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { InfoTag } from "@/components/ui/InfoTag";
-import { jobService } from "@/services/ApiServices";
+import { connectionService, jobService } from "@/services/ApiServices";
 import PostJobDialog from "@/components/PostJobDialog";
 import { cache, CACHE_KEYS, CACHE_TTL } from "@/lib/cache";
+import { ChatDialog } from "@/components/chat/ChatDialog";
+import { UserProfileDialog } from "@/components/profile/UserProfileDialog";
 import {
   Briefcase,
   MapPin,
-  DollarSign,
+  IndianRupee,
   Users,
   Edit,
   Trash2,
@@ -23,7 +25,11 @@ import {
   Calendar,
   CheckCircle,
   Clock,
-  Plus
+  Plus,
+  MessageCircle,
+  UserPlus,
+  UserCheck,
+  Loader2
 } from "lucide-react";
 import { StatusButton } from "@/components/ui/status-button";
 import {
@@ -62,6 +68,12 @@ export default function Jobs() {
   const [applicantsDialogOpen, setApplicantsDialogOpen] = useState(false);
   const [applicants, setApplicants] = useState<any[]>([]);
   const [loadingApplicants, setLoadingApplicants] = useState(false);
+  const [applicantConnectionStatuses, setApplicantConnectionStatuses] = useState<Record<string, any>>({});
+  const [loadingApplicantConnections, setLoadingApplicantConnections] = useState<Record<string, boolean>>({});
+  const [applicantProfileId, setApplicantProfileId] = useState<string | null>(null);
+  const [applicantChatId, setApplicantChatId] = useState<string | null>(null);
+  const [profileDialogOpen, setProfileDialogOpen] = useState(false);
+  const [chatDialogOpen, setChatDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("new");
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [jobDetailsOpen, setJobDetailsOpen] = useState(false);
@@ -241,6 +253,22 @@ export default function Jobs() {
       if (response.success) {
         const applicantsData = Array.isArray(response.data) ? response.data : [];
         setApplicants(applicantsData);
+        const statuses = await Promise.all(
+          applicantsData.map(async (applicant: any) => {
+            const applicantId = applicant._id || applicant.id;
+            if (!applicantId) return null;
+
+            try {
+              const statusResponse = await connectionService.getConnectionStatus(applicantId);
+              return [applicantId, statusResponse.data || { status: "none" }] as const;
+            } catch {
+              return [applicantId, { status: "none" }] as const;
+            }
+          })
+        );
+        setApplicantConnectionStatuses(
+          Object.fromEntries(statuses.filter((entry): entry is readonly [string, any] => entry !== null))
+        );
       } else {
         toast.error("Failed to load applicants", { description: response.message });
         setApplicants([]);
@@ -251,6 +279,38 @@ export default function Jobs() {
     } finally {
       setLoadingApplicants(false);
     }
+  };
+
+  const handleApplicantConnect = async (applicantId: string) => {
+    try {
+      setLoadingApplicantConnections(prev => ({ ...prev, [applicantId]: true }));
+      const response = await connectionService.sendConnectionRequest(applicantId);
+      if (!response.success) {
+        throw new Error(response.message || "Failed to send connection request");
+      }
+
+      setApplicantConnectionStatuses(prev => ({
+        ...prev,
+        [applicantId]: { ...prev[applicantId], status: "pending", isRequester: true },
+      }));
+      toast.success("Connection request sent!");
+    } catch (error: any) {
+      toast.error("Failed to send connection request", {
+        description: error.message || "Please try again.",
+      });
+    } finally {
+      setLoadingApplicantConnections(prev => ({ ...prev, [applicantId]: false }));
+    }
+  };
+
+  const handleApplicantProfile = (applicantId: string) => {
+    setApplicantProfileId(applicantId);
+    setProfileDialogOpen(true);
+  };
+
+  const handleApplicantMessage = (applicantId: string) => {
+    setApplicantChatId(applicantId);
+    setChatDialogOpen(true);
   };
 
   const formatDate = (dateString: string) => {
@@ -369,7 +429,7 @@ export default function Jobs() {
                 )}
                 {job.salary && (
                   <div className="flex items-center gap-2">
-                    <DollarSign className="h-4 w-4 text-green-500 flex-shrink-0" />
+                    <IndianRupee className="h-4 w-4 text-green-500 flex-shrink-0" />
                     <span className="text-foreground font-medium">₹{job.salary.toLocaleString()}/yr</span>
                   </div>
                 )}
@@ -525,7 +585,7 @@ export default function Jobs() {
                       </div>
 
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <DollarSign className="w-4 h-4 text-primary flex-shrink-0" />
+                        <IndianRupee className="w-4 h-4 text-primary flex-shrink-0" />
                         <span>₹{job.salary.toLocaleString()}/year</span>
                       </div>
 
@@ -630,7 +690,7 @@ export default function Jobs() {
               {applicants.map((applicant, index) => (
                 <Card key={index}>
                   <CardContent className="p-4">
-                    <div className="flex items-start justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                       <div>
                         <h4 className="font-semibold">{applicant.name}</h4>
                         <p className="text-sm text-muted-foreground">{applicant.email}</p>
@@ -645,6 +705,56 @@ export default function Jobs() {
                           </a>
                         )}
                       </div>
+                      {(() => {
+                        const applicantId = applicant._id || applicant.id;
+                        const connectionStatus = applicantConnectionStatuses[applicantId]?.status;
+                        const isLoading = loadingApplicantConnections[applicantId];
+
+                        if (!applicantId) return null;
+
+                        return connectionStatus === "accepted" ? (
+                          <div className="flex shrink-0 gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleApplicantProfile(applicantId)}
+                              className="gap-2"
+                            >
+                              <Eye className="h-4 w-4" />
+                              View Profile
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => handleApplicantMessage(applicantId)}
+                              className="gap-2"
+                            >
+                              <MessageCircle className="h-4 w-4" />
+                              Message
+                            </Button>
+                          </div>
+                        ) : connectionStatus === "pending" ? (
+                          <Button variant="outline" size="sm" disabled className="shrink-0 gap-2">
+                            <UserCheck className="h-4 w-4" />
+                            {applicantConnectionStatuses[applicantId]?.isRequester
+                              ? "Request Sent"
+                              : "Request Pending"}
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            onClick={() => handleApplicantConnect(applicantId)}
+                            disabled={isLoading}
+                            className="shrink-0 gap-2"
+                          >
+                            {isLoading ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <UserPlus className="h-4 w-4" />
+                            )}
+                            Connect
+                          </Button>
+                        );
+                      })()}
                     </div>
                   </CardContent>
                 </Card>
@@ -653,6 +763,19 @@ export default function Jobs() {
           )}
         </DialogContent>
       </Dialog>
+
+      <UserProfileDialog
+        open={profileDialogOpen}
+        onOpenChange={setProfileDialogOpen}
+        userId={applicantProfileId}
+        onMessageClick={handleApplicantMessage}
+      />
+
+      <ChatDialog
+        open={chatDialogOpen}
+        onOpenChange={setChatDialogOpen}
+        userId={applicantChatId || undefined}
+      />
 
       {/* Job Details Dialog */}
       <Dialog open={jobDetailsOpen} onOpenChange={setJobDetailsOpen}>
@@ -693,7 +816,7 @@ export default function Jobs() {
                   </div>
 
                   <div className="flex items-start gap-3">
-                    <DollarSign className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                    <IndianRupee className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Salary</p>
                       <p className="font-semibold">₹{jobDetailsData.salary.toLocaleString()}/year</p>
@@ -769,6 +892,4 @@ export default function Jobs() {
     </div>
   );
 }
-
-
 
