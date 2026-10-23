@@ -1,6 +1,7 @@
 ﻿import { useState, useRef } from "react";
-import { Send, ImageIcon, BarChart3, Link2, Bold, Italic, Code, X } from "lucide-react";
+import { Send, ImageIcon, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -35,6 +36,7 @@ export function PostComposer({ onPostCreated }: PostComposerProps) {
   const [images, setImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [open, setOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -91,6 +93,7 @@ export function PostComposer({ onPostCreated }: PostComposerProps) {
       if (response.success) {
         toast.success("Post published!");
         setContent(""); setSelectedCategory(""); setImages([]); setImagePreviews([]);
+        setOpen(false);
         if (onPostCreated) onPostCreated();
       }
     } catch (error: any) {
@@ -101,7 +104,28 @@ export function PostComposer({ onPostCreated }: PostComposerProps) {
   };
 
   return (
-    <Card className="overflow-hidden surface-card">
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Card className="cursor-pointer overflow-hidden surface-card transition-colors hover:border-primary/40">
+          <CardContent className="flex items-center gap-3 p-4 sm:p-5">
+            <Avatar className="h-10 w-10 border-2 border-background ring-2 ring-border/50">
+              <AvatarFallback className="bg-primary/10 text-primary font-semibold text-xs">AD</AvatarFallback>
+            </Avatar>
+            <div className="flex-1 rounded-full border border-border/60 bg-background/50 px-4 py-2.5 text-sm text-muted-foreground">
+              What's on your mind?
+            </div>
+            <Button type="button" className="hidden rounded-full sm:inline-flex">
+              New Post
+            </Button>
+          </CardContent>
+        </Card>
+      </DialogTrigger>
+      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Create a new post</DialogTitle>
+          <DialogDescription>Share something with the alumni community.</DialogDescription>
+        </DialogHeader>
+        <Card className="overflow-hidden border-0 shadow-none">
       <CardContent className="p-4 sm:p-5">
         <div className="flex gap-3 sm:gap-4">
           <div className="relative flex-shrink-0">
@@ -110,7 +134,6 @@ export function PostComposer({ onPostCreated }: PostComposerProps) {
                 AD
               </AvatarFallback>
             </Avatar>
-            <div className="absolute bottom-0 right-0 w-2.5 h-2.5 sm:w-3 sm:h-3 bg-green-500 border-2 border-background rounded-full shadow-sm"></div>
           </div>
 
           <div className="flex-1 space-y-3 sm:space-y-4">
@@ -165,16 +188,6 @@ export function PostComposer({ onPostCreated }: PostComposerProps) {
               {/* Formatting Tools */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 pt-1">
                 <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
-                  <Button variant="ghost" size="sm" className="p-1.5 sm:p-2 h-8 w-8 rounded-full hover:bg-muted" disabled>
-                    <Bold className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
-                  </Button>
-                  <Button variant="ghost" size="sm" className="p-1.5 sm:p-2 h-8 w-8 rounded-full hover:bg-muted" disabled>
-                    <Italic className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
-                  </Button>
-                  <Button variant="ghost" size="sm" className="p-1.5 sm:p-2 h-8 w-8 rounded-full hover:bg-muted" disabled>
-                    <Code className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
-                  </Button>
-                  <div className="w-px h-4 bg-border mx-1" />
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -192,12 +205,6 @@ export function PostComposer({ onPostCreated }: PostComposerProps) {
                     disabled={isSubmitting || images.length >= 5}
                   >
                     <ImageIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  </Button>
-                  <Button variant="ghost" size="sm" className="p-1.5 sm:p-2 h-8 w-8 rounded-full hover:bg-muted" disabled>
-                    <Link2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
-                  </Button>
-                  <Button variant="ghost" size="sm" className="p-1.5 sm:p-2 h-8 w-8 rounded-full hover:bg-muted" disabled>
-                    <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
                   </Button>
                 </div>
 
@@ -220,6 +227,8 @@ export function PostComposer({ onPostCreated }: PostComposerProps) {
           </div>
         </div>
       </CardContent>
-    </Card>
+        </Card>
+      </DialogContent>
+    </Dialog>
   );
 }

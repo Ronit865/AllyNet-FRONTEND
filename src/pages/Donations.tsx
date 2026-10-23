@@ -16,13 +16,28 @@ interface DonationCampaign {
   _id: string;
   name: string;
   description: string;
+  category?: string;
   goal: number;
   raisedAmount: number;
-  donors: any[];
+  donors: Array<{
+    userId: string | { _id: string };
+    payments?: DonationReceipt[];
+    paymentId?: string;
+    amount: number;
+  }>;
+  endDate?: string;
   createdAt: string;
 }
 
+interface DonationReceipt {
+  amount: number;
+  paidAt: string;
+  paymentId: string;
+  orderId: string;
+}
+
 const ITEMS_PER_PAGE = 6;
+let razorpayScriptPromise: Promise<boolean> | null = null;
 
 export default function Donations() {
 
@@ -32,8 +47,32 @@ export default function Donations() {
   const [selectedCampaign, setSelectedCampaign] = useState<DonationCampaign | null>(null);
   const [contributionAmount, setContributionAmount] = useState('');
   const [contributing, setContributing] = useState(false);
+  const [donatedCampaignIds, setDonatedCampaignIds] = useState<Set<string>>(new Set());
+  const [donationReceipts, setDonationReceipts] = useState<Record<string, DonationReceipt>>({});
+  const [receiptCampaign, setReceiptCampaign] = useState<DonationCampaign | null>(null);
   const [activePage, setActivePage] = useState(0);
   const [completedPage, setCompletedPage] = useState(0);
+
+  const restoreDonationReceipts = (campaignList: DonationCampaign[]) => {
+    const currentUserId = localStorage.getItem('userId');
+    if (!currentUserId) return;
+
+    const receipts: Record<string, DonationReceipt> = {};
+    const donatedIds = new Set<string>();
+    campaignList.forEach((campaign) => {
+      const donor = campaign.donors?.find((item) => {
+        const donorId = typeof item.userId === 'string' ? item.userId : item.userId?._id;
+        return donorId === currentUserId;
+      });
+      const latestPayment = donor?.payments?.[donor.payments.length - 1];
+      if (donor && latestPayment) {
+        donatedIds.add(campaign._id);
+        receipts[campaign._id] = latestPayment;
+      }
+    });
+    setDonatedCampaignIds(donatedIds);
+    setDonationReceipts(receipts);
+  };
 
   const fetchCampaigns = async () => {
     try {
@@ -41,6 +80,7 @@ export default function Donations() {
       const cachedCampaigns = cache.get<DonationCampaign[]>(CACHE_KEYS.USER_DONATIONS);
       if (cachedCampaigns) {
         setCampaigns(cachedCampaigns);
+        restoreDonationReceipts(cachedCampaigns);
         setLoading(false);
         return;
       }
@@ -50,6 +90,7 @@ export default function Donations() {
 
       if (response.success) {
         setCampaigns(response.data);
+        restoreDonationReceipts(response.data);
         cache.set(CACHE_KEYS.USER_DONATIONS, response.data, CACHE_TTL.MEDIUM);
       } else {
         toast.error("Error", { description: response.message || 'Failed to fetch donation campaigns' });
@@ -85,15 +126,90 @@ export default function Donations() {
 
     try {
       setContributing(true);
-      const response = await donationService.contributeToCampaign(selectedCampaign._id, amount);
+      const scriptLoaded = await loadRazorpayScript();
+      if (!scriptLoaded) throw new Error("Unable to load Razorpay checkout");
 
-      if (response.success) {
-        toast.success(`Contributed ₹${amount}!`, { description: "Thank you for your support." });
+      const orderResponse = await donationService.createPaymentOrder(selectedCampaign._id, amount);
+      if (!orderResponse.success || !orderResponse.data) {
+        throw new Error(orderResponse.message || "Unable to create payment order");
+      }
+
+      // Close the Radix modal before opening Razorpay. Keeping two modal focus
+      // traps mounted prevents pointer events from reaching the Razorpay iframe.
+      setContributeDialogOpen(false);
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      });
+
+      const paymentResult = await new Promise<{ verification: any; payment: {
+        razorpay_order_id: string;
+        razorpay_payment_id: string;
+      } }>((resolve, reject) => {
+        if (!window.Razorpay) {
+          reject(new Error("Razorpay checkout is unavailable. Please refresh and try again."));
+          return;
+        }
+
+        let settled = false;
+        const finish = (callback: () => void) => {
+          if (settled) return;
+          settled = true;
+          callback();
+        };
+
+        const checkout = new window.Razorpay({
+          key: orderResponse.data.keyId,
+          amount: orderResponse.data.amount,
+          currency: orderResponse.data.currency,
+          name: "AllyNet",
+          description: selectedCampaign.name,
+          order_id: orderResponse.data.orderId,
+          handler: async (payment) => {
+            try {
+              const verification = await donationService.verifyPayment(selectedCampaign._id, payment);
+              finish(() => resolve({ verification, payment }));
+            } catch (error) {
+              finish(() => reject(error));
+            }
+          },
+          modal: { ondismiss: () => finish(() => reject(new Error("Payment was cancelled"))) },
+          theme: { color: "#4775df" }
+        });
+        checkout.on("payment.failed", (payment) => {
+          finish(() => reject(new Error(payment.error?.description || "Payment failed")));
+        });
+        checkout.open();
+      });
+
+      const { verification, payment } = paymentResult;
+      if (verification.success) {
+        toast.success(`Donation successful: ₹${amount}`, { description: "Thank you for your support." });
+        setDonatedCampaignIds((current) => new Set(current).add(selectedCampaign._id));
+        setDonationReceipts((current) => ({
+          ...current,
+          [selectedCampaign._id]: {
+            amount,
+            paidAt: new Date().toISOString(),
+            paymentId: payment.razorpay_payment_id,
+            orderId: payment.razorpay_order_id
+          }
+        }));
+        if (verification.data?._id) {
+          setCampaigns((current) => current.map((campaign) =>
+            campaign._id === verification.data._id ? verification.data : campaign
+          ));
+          cache.set(
+            CACHE_KEYS.USER_DONATIONS,
+            campaigns.map((campaign) =>
+              campaign._id === verification.data._id ? verification.data : campaign
+            ),
+            CACHE_TTL.MEDIUM
+          );
+        }
         setContributeDialogOpen(false);
         setContributionAmount('');
-        fetchCampaigns();
       } else {
-        toast.error("Contribution failed", { description: response.message });
+        toast.error("Contribution failed", { description: verification.message });
       }
     } catch (error: any) {
       toast.error("Contribution failed", { description: error.message });
@@ -101,6 +217,31 @@ export default function Donations() {
       setContributing(false);
     }
   };
+
+  const loadRazorpayScript = (): Promise<boolean> => new Promise((resolve) => {
+    if (window.Razorpay) {
+      resolve(true);
+      return;
+    }
+    if (razorpayScriptPromise) {
+      razorpayScriptPromise.then(resolve);
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.id = "razorpay-checkout-script";
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.async = true;
+    razorpayScriptPromise = new Promise<boolean>((scriptResolve) => {
+      script.onload = () => scriptResolve(Boolean(window.Razorpay));
+      script.onerror = () => scriptResolve(false);
+    });
+    razorpayScriptPromise.then((loaded) => {
+      if (!loaded) razorpayScriptPromise = null;
+      resolve(loaded);
+    });
+    document.head.appendChild(script);
+  });
 
   // Categorize campaigns
   const activeCampaigns = campaigns.filter(c => ((c.raisedAmount ?? 0) / (c.goal ?? 1)) * 100 < 100);
@@ -123,6 +264,8 @@ export default function Donations() {
   const CampaignCard = ({ campaign, isCompleted = false }: { campaign: DonationCampaign; isCompleted?: boolean }) => {
     const progress = ((campaign.raisedAmount ?? 0) / (campaign.goal ?? 1)) * 100;
     const remaining = (campaign.goal ?? 0) - (campaign.raisedAmount ?? 0);
+    const hasDonated = donatedCampaignIds.has(campaign._id);
+    const donationReceipt = donationReceipts[campaign._id];
 
     return (
       <Card className="bento-card hover:shadow-md border-card-border/50 hover-lift flex flex-col h-full">
@@ -166,16 +309,44 @@ export default function Donations() {
           </div>
           {/* Button - Colorful Pill Style */}
           <div className="pt-2 mt-auto">
+            {donationReceipt && (
+              <div className="mb-3 space-y-3 rounded-xl border border-green-500/20 bg-green-500/5 p-3">
+                <div className="flex items-center gap-2 font-semibold text-green-600 dark:text-green-400">
+                  <CheckCircle className="h-4 w-4" />
+                  Donation confirmed
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-8 w-full border-green-500/25 bg-transparent text-xs font-medium text-green-700 hover:bg-green-500/10 hover:text-green-800 dark:text-green-300 dark:hover:text-green-200"
+                  onClick={() => setReceiptCampaign(campaign)}
+                >
+                  View donation details
+                </Button>
+              </div>
+            )}
             <Button
-              className={`w-full rounded-full font-semibold transition-all duration-200 focus-visible:ring-0 focus-visible:ring-offset-0 ${isCompleted
-                ? 'bg-green-500/10 text-green-600 border border-green-500/20 dark:bg-green-500/15 dark:text-green-400'
+              className={`w-full rounded-full font-semibold transition-all duration-200 focus-visible:ring-0 focus-visible:ring-offset-0 disabled:opacity-100 ${isCompleted || hasDonated
+                ? 'border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 shadow-sm shadow-emerald-500/5 dark:bg-emerald-500/15 dark:text-emerald-300'
                 : 'bg-red-500/10 text-red-600 hover:bg-red-500/25 hover:text-red-700 border border-red-500/20 hover:border-red-500/40 dark:bg-red-500/15 dark:text-red-400 dark:hover:bg-red-500/30 dark:hover:text-red-300'
                 }`}
               onClick={() => handleContribute(campaign)}
-              disabled={isCompleted}
+              disabled={isCompleted || hasDonated}
               variant="ghost"
             >
-              {isCompleted ? '✓ Goal Reached' : '❤ Contribute Now'}
+              {isCompleted ? (
+                <>
+                  <CheckCircle className="h-4 w-4" />
+                  Goal Reached
+                </>
+              ) : hasDonated ? (
+                <>
+                  <CheckCircle className="h-4 w-4" />
+                  Donated
+                </>
+              ) : (
+                '❤ Contribute Now'
+              )}
             </Button>
           </div>
         </CardContent>
@@ -345,71 +516,122 @@ export default function Donations() {
 
       {/* Contribution Dialog */}
       <Dialog open={contributeDialogOpen} onOpenChange={setContributeDialogOpen}>
-        <DialogContent className="p-0 gap-0 max-w-sm rounded-lg border shadow-modal overflow-hidden">
+        <DialogContent className="w-[calc(100%-2rem)] max-w-lg overflow-hidden rounded-2xl border p-0 shadow-modal">
           {/* Header */}
-          <DialogHeader className="modal-header">
-            <DialogTitle className="modal-header-title">Contribute to campaign</DialogTitle>
-            <DialogDescription className="modal-header-desc mt-1">
-              {selectedCampaign?.name} — every amount makes a difference.
+          <DialogHeader className="border-b bg-muted/20 px-6 py-5 pr-14 text-left">
+            <DialogTitle className="text-xl font-semibold">Support this campaign</DialogTitle>
+            <DialogDescription className="mt-1 leading-relaxed">
+              {selectedCampaign?.name}
             </DialogDescription>
           </DialogHeader>
 
           {/* Body */}
-          <div className="modal-body space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="amount" className="text-[12px] font-medium text-foreground">Amount (₹)</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="amount"
-                  type="number"
-                  placeholder="e.g. 500"
-                  value={contributionAmount}
-                  onChange={(e) => setContributionAmount(e.target.value)}
-                  min="1"
-                  step="1"
-                  className="flex-1 h-9 text-sm font-numeric"
-                />
-                {selectedCampaign && (selectedCampaign.goal ?? 0) > (selectedCampaign.raisedAmount ?? 0) && (
+          <div className="max-h-[min(30rem,calc(90vh-9rem))] space-y-5 overflow-y-auto px-6 py-5">
+            <div className="space-y-2">
+              <h3 className="text-base font-semibold text-foreground">What this supports</h3>
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                {selectedCampaign?.description || "Support this community campaign and help it reach its goal."}
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="amount" className="text-sm font-medium text-foreground">Choose an amount</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {[500, 1000, 2500].map((amount) => (
                   <Button
-                    type="button" variant="outline" size="sm"
-                    onClick={() => {
-                      const rem = (selectedCampaign.goal ?? 0) - (selectedCampaign.raisedAmount ?? 0);
-                      setContributionAmount(rem.toString());
-                    }}
-                    className="h-9 text-xs"
+                    key={amount}
+                    type="button"
+                    variant="outline"
+                    className="h-10 rounded-lg"
+                    onClick={() => setContributionAmount(amount.toString())}
                   >
-                    Fill gap
+                    ₹{amount.toLocaleString()}
                   </Button>
-                )}
+                ))}
               </div>
+              <Input
+                id="amount"
+                type="number"
+                placeholder="Enter another amount"
+                value={contributionAmount}
+                onChange={(e) => setContributionAmount(e.target.value)}
+                min="1"
+                step="1"
+                className="h-10 text-sm font-numeric"
+              />
             </div>
 
             {selectedCampaign && (
-              <div className="rounded-md border bg-muted/40 divide-y text-[12px]">
-                <div className="flex justify-between px-3 py-2">
-                  <span className="text-muted-foreground">Goal</span>
-                  <span className="font-numeric font-semibold text-foreground">₹{(selectedCampaign.goal ?? 0).toLocaleString()}</span>
+              <div className="rounded-xl border bg-muted/30 p-4">
+                <div className="mb-2 flex justify-between text-xs">
+                  <span className="text-muted-foreground">Campaign progress</span>
+                  <span className="font-semibold text-foreground">
+                    ₹{(selectedCampaign.raisedAmount ?? 0).toLocaleString()} of ₹{(selectedCampaign.goal ?? 0).toLocaleString()}
+                  </span>
                 </div>
-                <div className="flex justify-between px-3 py-2">
-                  <span className="text-muted-foreground">Raised so far</span>
-                  <span className="font-numeric font-semibold text-foreground">₹{(selectedCampaign.raisedAmount ?? 0).toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between px-3 py-2">
-                  <span className="text-muted-foreground">Remaining</span>
-                  <span className="font-numeric font-semibold text-foreground">₹{((selectedCampaign.goal ?? 0) - (selectedCampaign.raisedAmount ?? 0)).toLocaleString()}</span>
-                </div>
+                <Progress
+                  value={Math.min(((selectedCampaign.raisedAmount ?? 0) / (selectedCampaign.goal || 1)) * 100, 100)}
+                  className="h-2"
+                />
               </div>
             )}
           </div>
 
-          {/* Footer */}
-          <DialogFooter className="modal-footer">
-            <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setContributeDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button size="sm" className="h-8 text-xs" onClick={submitContribution} disabled={contributing}>
-              {contributing && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
-              Contribute
+            {/* Footer */}
+            <DialogFooter className="gap-3 border-t bg-muted/20 px-6 py-4 sm:gap-3">
+              <Button variant="ghost" className="h-10 px-4 text-sm font-medium" onClick={() => setContributeDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button className="h-10 min-w-44 px-5 text-sm font-semibold" onClick={submitContribution} disabled={contributing}>
+                {contributing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Continue to payment
+              </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(receiptCampaign)}
+        onOpenChange={(open) => {
+          if (!open) setReceiptCampaign(null);
+        }}
+      >
+        <DialogContent className="w-[calc(100%-2rem)] max-w-md overflow-hidden rounded-2xl border p-0 shadow-modal">
+          <DialogHeader className="border-b bg-muted/20 px-6 py-5 pr-14 text-left">
+            <DialogTitle className="text-lg font-semibold">Donation details</DialogTitle>
+            <DialogDescription className="mt-1 leading-relaxed">
+              {receiptCampaign?.name}
+            </DialogDescription>
+          </DialogHeader>
+          {receiptCampaign && donationReceipts[receiptCampaign._id] && (
+            <div className="space-y-4 px-6 py-5">
+              <div className="flex items-center gap-2 text-sm font-semibold text-green-600 dark:text-green-400">
+                <CheckCircle className="h-5 w-5" />
+                Payment confirmed
+              </div>
+              <div className="grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-3 rounded-xl border bg-muted/30 p-4 text-sm">
+                <span className="text-muted-foreground">Amount</span>
+                <span className="text-right font-semibold text-foreground">
+                  ₹{donationReceipts[receiptCampaign._id].amount.toLocaleString("en-IN")}
+                </span>
+                <span className="text-muted-foreground">Date</span>
+                <span className="text-right text-foreground">
+                  {new Date(donationReceipts[receiptCampaign._id].paidAt).toLocaleDateString("en-IN", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric"
+                  })}
+                </span>
+                <span className="text-muted-foreground">Reference</span>
+                <span className="text-right font-mono text-xs text-foreground">
+                  {donationReceipts[receiptCampaign._id].paymentId.slice(-8)}
+                </span>
+              </div>
+            </div>
+          )}
+          <DialogFooter className="border-t bg-muted/20 px-6 py-4">
+            <Button className="h-10 px-5 text-sm font-medium" onClick={() => setReceiptCampaign(null)}>
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -417,4 +639,3 @@ export default function Donations() {
     </div>
   );
 }
-

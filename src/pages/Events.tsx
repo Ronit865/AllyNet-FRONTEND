@@ -1,5 +1,5 @@
-﻿import { useState, useEffect } from "react";
-import { Calendar, MapPin, Users, Clock, Search, CalendarDays, ChevronLeft, ChevronRight, Plus, Loader2, Check } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Calendar, MapPin, Users, Clock, Search, CalendarDays, ChevronLeft, ChevronRight, Plus, Loader2, Check, CreditCard, Eye, ListFilter, UserX } from "lucide-react";
 import { StatusButton } from "@/components/ui/status-button";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,8 @@ import { toast } from "sonner";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { eventService } from "@/services/ApiServices";
 import { userService } from "@/services/ApiServices";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cache, CACHE_KEYS, CACHE_TTL } from "@/lib/cache";
 
 interface Event {
@@ -24,10 +26,29 @@ interface Event {
     category?: string;
     participants: any[];
     maxAttendees?: number;
+    isPaid?: boolean;
+    price?: number;
     image?: string;
     isactive: boolean;
     createdAt: string;
     updatedAt: string;
+}
+
+interface RazorpayCheckoutOptions {
+    key: string;
+    amount: number;
+    currency: string;
+    name: string;
+    description: string;
+    order_id: string;
+    handler: (response: {
+        razorpay_order_id: string;
+        razorpay_payment_id: string;
+        razorpay_signature: string;
+    }) => void;
+    prefill?: { name?: string };
+    theme?: { color: string };
+    modal?: { ondismiss?: () => void };
 }
 
 const ITEMS_PER_PAGE = 6;
@@ -42,8 +63,16 @@ export default function Events() {
     const [registeredEvents, setRegisteredEvents] = useState<Set<string>>(new Set());
     const [activeEventPage, setActiveEventPage] = useState(0);
     const [pastEventPage, setPastEventPage] = useState(0);
+    const [pastEventTab, setPastEventTab] = useState<"all" | "applied" | "not-applied">("all");
+    const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+    const [detailsOpen, setDetailsOpen] = useState(false);
+    const [currentUserId, setCurrentUserId] = useState<string>();
+    const initialLoadStarted = useRef(false);
+    const [paymentEvent, setPaymentEvent] = useState<string | null>(null);
 
     useEffect(() => {
+        if (initialLoadStarted.current) return;
+        initialLoadStarted.current = true;
         fetchEvents();
     }, []);
 
@@ -102,6 +131,7 @@ export default function Events() {
 
             if (userResponse.success && userResponse.data) {
                 const userId = userResponse.data._id;
+                setCurrentUserId(userId);
 
                 const registered = new Set<string>();
                 events.forEach(event => {
@@ -124,20 +154,11 @@ export default function Events() {
         }
     };
 
-    const getCurrentUserId = async (): Promise<string | undefined> => {
-        try {
-            const userResponse = await userService.getCurrentUser();
-            return userResponse.data?._id;
-        } catch (error) {
-            return undefined;
-        }
-    };
-
     const handleJoinEvent = async (eventId: string) => {
         try {
             setJoiningEvent(eventId);
 
-            const userId = await getCurrentUserId();
+            const userId = currentUserId;
             if (!userId) {
                 toast.error("Error", { description: "Please login to join events" });
                 return;
@@ -167,6 +188,68 @@ export default function Events() {
         }
     };
 
+    const handlePaidEvent = async (event: Event) => {
+        try {
+            setPaymentEvent(event._id);
+            const script = await loadRazorpayScript();
+            if (!script) {
+                throw new Error("Unable to load Razorpay checkout");
+            }
+
+            const orderResponse = await eventService.createPaymentOrder(event._id);
+            if (!orderResponse.success || !orderResponse.data) {
+                throw new Error(orderResponse.message || "Unable to create payment order");
+            }
+
+            await new Promise<void>((resolve, reject) => {
+                const checkout = new window.Razorpay({
+                    key: orderResponse.data.keyId,
+                    amount: orderResponse.data.amount,
+                    currency: orderResponse.data.currency,
+                    name: "AllyNet",
+                    description: event.title,
+                    order_id: orderResponse.data.orderId,
+                    handler: async (response) => {
+                        try {
+                            const verification = await eventService.verifyPayment(event._id, response);
+                            if (!verification.success) throw new Error(verification.message || "Payment verification failed");
+                            const userId = currentUserId;
+                            if (userId) {
+                                setRegisteredEvents(prev => new Set(prev).add(event._id));
+                                setEvents(prev => prev.map(item => item._id === event._id
+                                    ? { ...item, participants: [...item.participants, userId] }
+                                    : item));
+                            }
+                            toast.success("Payment successful", { description: "You are registered for this event." });
+                            resolve();
+                        } catch (error: any) {
+                            reject(error);
+                        }
+                    },
+                    modal: { ondismiss: () => reject(new Error("Payment was cancelled")) },
+                    theme: { color: "#4775df" }
+                } as RazorpayCheckoutOptions);
+                checkout.open();
+            });
+        } catch (error: any) {
+            toast.error("Payment failed", { description: error.message || "Please try again." });
+        } finally {
+            setPaymentEvent(null);
+        }
+    };
+
+    const loadRazorpayScript = (): Promise<boolean> => new Promise((resolve) => {
+        if (window.Razorpay) {
+            resolve(true);
+            return;
+        }
+        const script = document.createElement("script");
+        script.src = "https://checkout.razorpay.com/v1/checkout.js";
+        script.onload = () => resolve(true);
+        script.onerror = () => resolve(false);
+        document.body.appendChild(script);
+    });
+
     const handleLeaveEvent = async (eventId: string, eventTitle?: string) => {
         const ok = await confirm({
           title: "Leave Event?",
@@ -178,7 +261,7 @@ export default function Events() {
         try {
             setJoiningEvent(eventId);
 
-            const userId = await getCurrentUserId();
+            const userId = currentUserId;
             if (!userId) {
                 toast.error("Unable to leave event");
                 return;
@@ -247,16 +330,24 @@ export default function Events() {
         return eventDate < today || !event.isactive;
     });
 
+    const appliedPastEvents = pastEvents.filter(event => registeredEvents.has(event._id));
+    const notAppliedPastEvents = pastEvents.filter(event => !registeredEvents.has(event._id));
+    const visiblePastEvents = pastEventTab === "applied"
+        ? appliedPastEvents
+        : pastEventTab === "not-applied"
+            ? notAppliedPastEvents
+            : pastEvents;
+
     // Pagination
     const activeEventsTotalPages = Math.ceil(activeEvents.length / ITEMS_PER_PAGE);
-    const pastEventsTotalPages = Math.ceil(pastEvents.length / ITEMS_PER_PAGE);
+    const pastEventsTotalPages = Math.ceil(visiblePastEvents.length / ITEMS_PER_PAGE);
 
     const paginatedActiveEvents = activeEvents.slice(
         activeEventPage * ITEMS_PER_PAGE,
         (activeEventPage + 1) * ITEMS_PER_PAGE
     );
 
-    const paginatedPastEvents = pastEvents.slice(
+    const paginatedPastEvents = visiblePastEvents.slice(
         pastEventPage * ITEMS_PER_PAGE,
         (pastEventPage + 1) * ITEMS_PER_PAGE
     );
@@ -312,31 +403,53 @@ export default function Events() {
                     <div className="flex items-center gap-2">
                         <Users className="h-4 w-4 text-orange-500 flex-shrink-0" />
                         <span className="text-foreground font-medium truncate">
-                            {event.participants.length}{event.maxAttendees && `/${event.maxAttendees}`}
+                            {event.participants.length}{event.maxAttendees ? `/${event.maxAttendees}` : ""}
+                        </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <CreditCard className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+                        <span className="text-foreground font-medium truncate">
+                            {event.isPaid ? `₹${(event.price || 0).toLocaleString()}` : "Free"}
                         </span>
                     </div>
                 </div>
 
-                {/* Action Button - Hide for past events unless already registered */}
-                {(!isPast || registeredEvents.has(event._id)) && (
+                <div className="flex gap-2">
                     <Button
                         size="sm"
-                        className={`w-full h-10 font-semibold rounded-full transition-all duration-200 focus-visible:ring-0 focus-visible:ring-offset-0 ${registeredEvents.has(event._id)
-                            ? 'bg-red-500/10 text-red-600 hover:bg-red-500/25 hover:text-red-700 border border-red-500/20 hover:border-red-500/40 dark:bg-red-500/15 dark:text-red-400 dark:hover:bg-red-500/30 dark:hover:text-red-300'
-                            : 'bg-green-500/10 text-green-600 hover:bg-green-500/25 hover:text-green-700 border border-green-500/20 hover:border-green-500/40 dark:bg-green-500/15 dark:text-green-400 dark:hover:bg-green-500/30 dark:hover:text-green-300'
-                            }`}
-                        onClick={() => registeredEvents.has(event._id)
-                            ? handleLeaveEvent(event._id, event.title)
-                            : handleJoinEvent(event._id)
-                        }
-                        disabled={
-                            isPast || // Disable for past events
-                            (!registeredEvents.has(event._id) && 
-                            event.maxAttendees !== undefined && 
-                            event.participants.length >= event.maxAttendees)
-                        }
-                        variant="ghost"
+                        variant="outline"
+                        className="h-10 min-w-0 flex-1 rounded-full px-2 text-xs font-semibold sm:px-3 sm:text-sm"
+                        onClick={() => {
+                            setSelectedEvent(event);
+                            setDetailsOpen(true);
+                        }}
                     >
+                        <Eye className="mr-1.5 h-4 w-4 shrink-0 sm:mr-2" />
+                        View Details
+                    </Button>
+
+                    {/* Registration status/action */}
+                    {!isPast ? (
+                        <Button
+                            size="sm"
+                            className={`h-10 min-w-0 flex-1 rounded-full px-2 text-xs font-semibold transition-all duration-200 focus-visible:ring-0 focus-visible:ring-offset-0 sm:px-3 sm:text-sm ${registeredEvents.has(event._id)
+                                ? 'bg-red-500/10 text-red-600 hover:bg-red-500/25 hover:text-red-700 border border-red-500/20 hover:border-red-500/40 dark:bg-red-500/15 dark:text-red-400 dark:hover:bg-red-500/30 dark:hover:text-red-300'
+                                : 'bg-green-500/10 text-green-600 hover:bg-green-500/25 hover:text-green-700 border border-green-500/20 hover:border-green-500/40 dark:bg-green-500/15 dark:text-green-400 dark:hover:bg-green-500/30 dark:hover:text-green-300'
+                                }`}
+                            onClick={() => registeredEvents.has(event._id)
+                                ? handleLeaveEvent(event._id, event.title)
+                                : event.isPaid
+                                    ? handlePaidEvent(event)
+                                    : handleJoinEvent(event._id)
+                            }
+                            disabled={
+                                paymentEvent === event._id ||
+                                (!registeredEvents.has(event._id) &&
+                                event.maxAttendees !== undefined && event.maxAttendees !== null &&
+                                event.participants.length >= event.maxAttendees)
+                            }
+                            variant="ghost"
+                        >
                         {joiningEvent === event._id ? (
                             <>
                                 <Loader2 className="w-4 h-4 animate-spin mr-2" />
@@ -347,13 +460,28 @@ export default function Events() {
                                 <Check className="w-4 h-4 mr-2" />
                                 Leave Event
                             </>
-                        ) : (event.maxAttendees && event.participants.length >= event.maxAttendees) ? (
+                        ) : paymentEvent === event._id ? (
+                            "Opening payment..."
+                        ) : event.isPaid ? (
+                            `Pay ₹${(event.price || 0).toLocaleString()}`
+                        ) : (event.maxAttendees !== undefined && event.maxAttendees !== null && event.participants.length >= event.maxAttendees) ? (
                             "Event Full"
                         ) : (
                             "Join Event"
                         )}
-                    </Button>
-                )}
+                        </Button>
+                    ) : registeredEvents.has(event._id) ? (
+                        <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled
+                            className="h-10 min-w-0 flex-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 text-xs font-semibold text-emerald-600 opacity-100 sm:px-3 sm:text-sm dark:text-emerald-400"
+                        >
+                            <Check className="mr-1.5 h-4 w-4 shrink-0 sm:mr-2" />
+                            Participated
+                        </Button>
+                    ) : null}
+                </div>
             </CardContent>
         </Card>
     );
@@ -507,11 +635,37 @@ export default function Events() {
             {/* Past Events Section */}
             {!loading && (
                 <div>
-                    <div className="flex items-center gap-2 mb-4">
-                        <Clock className="h-5 w-5 text-muted-foreground" />
-                        <h2 className="text-lg sm:text-xl font-semibold text-foreground">
-                            Past Events ({pastEvents.length})
-                        </h2>
+                    <div className="mb-4 space-y-3">
+                        <div className="flex items-center gap-2">
+                            <Clock className="h-5 w-5 text-muted-foreground" />
+                            <h2 className="text-lg font-semibold text-foreground sm:text-xl">
+                                Past Events ({pastEvents.length})
+                            </h2>
+                        </div>
+                        {pastEvents.length > 0 && (
+                            <Tabs
+                                value={pastEventTab}
+                                onValueChange={(value) => {
+                                    setPastEventTab(value as typeof pastEventTab);
+                                    setPastEventPage(0);
+                                }}
+                            >
+                                <TabsList className="grid h-auto w-full max-w-xl grid-cols-3 gap-1 rounded-xl bg-muted/70 p-1.5">
+                                    <TabsTrigger value="all" className="gap-1.5 px-2 py-2 text-xs sm:px-3 sm:text-sm">
+                                        <ListFilter className="h-3.5 w-3.5" />
+                                        All <span className="text-xs opacity-75">({pastEvents.length})</span>
+                                    </TabsTrigger>
+                                    <TabsTrigger value="applied" className="gap-1.5 px-2 py-2 text-xs sm:px-3 sm:text-sm">
+                                        <Check className="h-3.5 w-3.5" />
+                                        Applied <span className="text-xs opacity-75">({appliedPastEvents.length})</span>
+                                    </TabsTrigger>
+                                    <TabsTrigger value="not-applied" className="gap-1.5 px-2 py-2 text-xs sm:px-3 sm:text-sm">
+                                        <UserX className="h-3.5 w-3.5" />
+                                        Not Applied <span className="text-xs opacity-75">({notAppliedPastEvents.length})</span>
+                                    </TabsTrigger>
+                                </TabsList>
+                            </Tabs>
+                        )}
                     </div>
 
                     {pastEvents.length === 0 ? (
@@ -519,6 +673,17 @@ export default function Events() {
                             <CardContent className="pt-10 pb-10 sm:pt-12 sm:pb-12 text-center">
                                 <Clock className="h-10 w-10 sm:h-12 sm:w-12 mx-auto text-muted-foreground mb-4" />
                                 <p className="text-sm sm:text-base text-muted-foreground">No past events to display.</p>
+                            </CardContent>
+                        </Card>
+                    ) : visiblePastEvents.length === 0 ? (
+                        <Card className="border-card-border/50">
+                            <CardContent className="py-10 text-center sm:py-12">
+                                <Check className="mx-auto mb-4 h-10 w-10 text-muted-foreground sm:h-12 sm:w-12" />
+                                <p className="text-sm text-muted-foreground sm:text-base">
+                                    {pastEventTab === "applied"
+                                        ? "You have not applied to any past events."
+                                        : "You have applied to all past events."}
+                                </p>
                             </CardContent>
                         </Card>
                     ) : (
@@ -540,8 +705,70 @@ export default function Events() {
                     )}
                 </div>
             )}
+            <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
+                <DialogContent className="flex max-h-[85vh] max-w-3xl flex-col gap-0 overflow-hidden p-0">
+                    <DialogHeader className="shrink-0 border-b px-6 py-5 pr-12">
+                        <DialogTitle className="text-2xl font-bold">{selectedEvent?.title}</DialogTitle>
+                        <DialogDescription className="flex items-center gap-2">
+                            <CalendarDays className="h-4 w-4" />
+                            {selectedEvent && formatDate(selectedEvent.date)}
+                        </DialogDescription>
+                    </DialogHeader>
+                    {selectedEvent && (
+                        <>
+                            <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5 [scrollbar-gutter:stable]">
+                                <div className="space-y-6">
+                                    <div>
+                                        <h3 className="mb-2 text-lg font-semibold">Event Description</h3>
+                                        <p className="whitespace-pre-wrap text-muted-foreground">{selectedEvent.description}</p>
+                                    </div>
+                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                        <div className="flex items-start gap-3">
+                                            <Clock className="mt-0.5 h-5 w-5 text-primary" />
+                                            <div><p className="text-sm text-muted-foreground">Time</p><p className="font-semibold">{selectedEvent.time || "TBD"}</p></div>
+                                        </div>
+                                        <div className="flex items-start gap-3">
+                                            <MapPin className="mt-0.5 h-5 w-5 text-primary" />
+                                            <div><p className="text-sm text-muted-foreground">Location</p><p className="font-semibold">{selectedEvent.location || "TBD"}</p></div>
+                                        </div>
+                                        <div className="flex items-start gap-3">
+                                            <Users className="mt-0.5 h-5 w-5 text-primary" />
+                                            <div><p className="text-sm text-muted-foreground">Seats</p><p className="font-semibold">{selectedEvent.participants.length}{selectedEvent.maxAttendees ? ` / ${selectedEvent.maxAttendees}` : " registered"}</p></div>
+                                        </div>
+                                        <div className="flex items-start gap-3">
+                                            <CreditCard className="mt-0.5 h-5 w-5 text-primary" />
+                                            <div><p className="text-sm text-muted-foreground">Registration Fee</p><p className="font-semibold">{selectedEvent.isPaid ? `₹${(selectedEvent.price || 0).toLocaleString()}` : "Free"}</p></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="shrink-0 border-t bg-background px-6 py-4">
+                                <Button
+                                    className="w-full"
+                                    disabled={paymentEvent === selectedEvent._id || selectedEvent.participants.length >= (selectedEvent.maxAttendees || Infinity) || registeredEvents.has(selectedEvent._id)}
+                                    onClick={() => {
+                                        setDetailsOpen(false);
+                                        selectedEvent.isPaid
+                                            ? handlePaidEvent(selectedEvent)
+                                            : handleJoinEvent(selectedEvent._id);
+                                    }}
+                                >
+                                    {paymentEvent === selectedEvent._id
+                                        ? "Opening payment..."
+                                        : selectedEvent.participants.length >= (selectedEvent.maxAttendees || Infinity)
+                                            ? "Event Full"
+                                            : registeredEvents.has(selectedEvent._id)
+                                                ? "Already Registered"
+                                                : selectedEvent.isPaid
+                                                    ? `Pay ₹${(selectedEvent.price || 0).toLocaleString()} & Register`
+                                                    : "Join Event"}
+                                </Button>
+                            </div>
+                        </>
+                    )}
+                </DialogContent>
+            </Dialog>
         {ConfirmDialogEl}
         </div>
     );
 }
-

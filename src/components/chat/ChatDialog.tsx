@@ -1,6 +1,6 @@
-﻿import { useState, useEffect, useLayoutEffect, useRef } from "react";
-import { Send, MoreVertical, Loader2, Trash2, ArrowLeft, Search, MessagesSquare, Check, CheckCheck } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
+import { Send, MoreVertical, Loader2, Trash2, ArrowLeft, Search, MessagesSquare, Check, CheckCheck, X } from "lucide-react";
+import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -30,6 +30,7 @@ interface ChatDialogProps {
 
 interface Message {
   _id: string;
+  conversation?: string;
   sender: {
     _id: string;
     name: string;
@@ -54,6 +55,7 @@ interface Conversation {
     content: string;
     createdAt: string;
   };
+  unreadCount?: number;
 }
 
 export function ChatDialog({
@@ -76,7 +78,7 @@ export function ChatDialog({
   const [showConversationList, setShowConversationList] = useState(!initialConversationId && !userId);
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
   const [typingTimeout, setTypingTimeout] = useState<NodeJS.Timeout | null>(null);
-  const { socket, onlineUsers, isConnected } = useSocket();
+  const { socket, onlineUsers } = useSocket();
   const isParticipantOnline = useOnlineStatus(participant._id);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -146,10 +148,34 @@ export function ChatDialog({
 
   // Real-time message listener
   useEffect(() => {
-    if (!socket || !conversationId || !open) return;
+    if (!socket) return;
 
     const handleNewMessage = (message: Message) => {
-      if (message.conversation?.toString() === conversationId) {
+      const incomingConversationId = message.conversation?.toString();
+      const isOwnMessage = message.sender?._id?.toString() === currentUser?._id?.toString();
+      const isActiveConversation = Boolean(
+        open && conversationId && incomingConversationId === conversationId
+      );
+
+      if (incomingConversationId && !isOwnMessage) {
+        setConversations(prev => prev.map(conv => {
+          if (conv._id !== incomingConversationId || isActiveConversation) return conv;
+          return {
+            ...conv,
+            lastMessage: {
+              content: message.content,
+              createdAt: message.createdAt
+            },
+            unreadCount: Math.min((conv.unreadCount || 0) + 1, 5)
+          };
+        }));
+      }
+
+      if (isActiveConversation) {
+        socket.emit('message:delivered', {
+          messageId: message._id,
+          conversationId
+        });
         setMessages(prev => {
           // Avoid duplicates
           if (prev.some(m => m._id === message._id)) return prev;
@@ -270,6 +296,9 @@ export function ChatDialog({
   };
 
   const handleSelectConversation = (conv: Conversation) => {
+    setConversations(prev => prev.map(item =>
+      item._id === conv._id ? { ...item, unreadCount: 0 } : item
+    ));
     setConversationId(conv._id);
     setParticipant({
       name: conv.participant?.name,
@@ -363,7 +392,7 @@ export function ChatDialog({
       if (newMsg) {
         setMessages(prev => prev.map(m =>
           m._id === optimisticMessage._id
-            ? { ...newMsg, delivered: true, deliveredAt: new Date().toISOString() }
+            ? { ...newMsg, delivered: false }
             : m
         ));
       }
@@ -425,17 +454,21 @@ export function ChatDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] sm:w-[560px] max-w-[95vw] h-[85vh] max-h-[85vh] p-0 flex flex-col gap-0 overflow-hidden">
+      <DialogContent hideClose className="w-[95vw] sm:w-[560px] max-w-[95vw] h-[85vh] max-h-[85vh] p-0 flex flex-col gap-0 overflow-hidden">
         {showConversationList ? (
           <>
             {/* ── List Header ── */}
-            <div className="flex items-center gap-3 px-4 py-3 border-b flex-shrink-0">
+            <div className="relative flex h-14 items-center gap-3 border-b px-4 pr-16 flex-shrink-0">
               <MessagesSquare className="w-4 h-4 text-muted-foreground" />
               <h2 className="text-sm font-semibold">Messages</h2>
+              <DialogClose className="absolute right-4 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-red-500/40 bg-red-500/10 text-red-500 shadow-sm transition-all hover:scale-105 hover:border-red-500/70 hover:bg-red-500/20 hover:text-red-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50 dark:text-red-400 dark:hover:text-red-300">
+                <X className="h-5 w-5" strokeWidth={2} />
+                <span className="sr-only">Close</span>
+              </DialogClose>
             </div>
 
             {/* ── Search ── */}
-            <div className="px-4 py-2.5 border-b flex-shrink-0">
+            <div className="border-b px-4 py-2.5 flex-shrink-0">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
                 <Input
@@ -461,7 +494,9 @@ export function ChatDialog({
               ) : (
                 <div>
                   {filteredConversations.map(conv => {
-                    const isOnline = onlineUsers.has(conv.participant?._id);
+                    const participantId = conv.participant?._id?.toString?.() || conv.participant?.id?.toString?.();
+                    const isOnline = Boolean(participantId && onlineUsers.has(participantId));
+                    const unreadCount = conv.unreadCount || 0;
                     return (
                       <button
                         key={conv._id}
@@ -479,7 +514,14 @@ export function ChatDialog({
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-2 mb-0.5">
-                            <p className="text-sm font-medium truncate">{conv.participant?.name}</p>
+                            <div className="flex min-w-0 items-center gap-2">
+                              <p className="text-sm font-medium truncate">{conv.participant?.name}</p>
+                              {unreadCount > 0 && (
+                                <span className="inline-flex h-5 min-w-5 flex-shrink-0 items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-semibold text-primary-foreground">
+                                  {unreadCount >= 5 ? '4+' : unreadCount}
+                                </span>
+                              )}
+                            </div>
                             {conv.lastMessage?.createdAt && (
                               <span className="text-[11px] text-muted-foreground flex-shrink-0">
                                 {getTimeAgo(conv.lastMessage.createdAt)}
@@ -500,7 +542,7 @@ export function ChatDialog({
         ) : (
           <>
             {/* ── Chat Header ── */}
-            <div className="flex items-center gap-3 px-4 py-3 pr-16 border-b flex-shrink-0 bg-card">
+            <div className="relative flex items-center gap-3 px-4 py-3 pr-16 border-b flex-shrink-0 bg-card">
               <Button variant="ghost" size="icon" onClick={handleBackToList} className="h-8 w-8 flex-shrink-0 -ml-1">
                 <ArrowLeft className="w-4 h-4" />
               </Button>
@@ -523,14 +565,10 @@ export function ChatDialog({
                     )}
                 </p>
               </div>
-              <div
-                className="flex items-center gap-1.5 text-[10px] text-muted-foreground"
-                aria-live="polite"
-                title={isConnected ? "Real-time connection active" : "Connecting to real-time updates"}
-              >
-                <span className={`h-1.5 w-1.5 rounded-full ${isConnected ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'}`} />
-                <span className="hidden sm:inline">{isConnected ? 'Live' : 'Connecting'}</span>
-              </div>
+              <DialogClose className="absolute right-4 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-red-500/40 bg-red-500/10 text-red-500 shadow-sm transition-all hover:scale-105 hover:border-red-500/70 hover:bg-red-500/20 hover:text-red-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50 dark:text-red-400 dark:hover:text-red-300">
+                <X className="h-5 w-5" strokeWidth={2} />
+                <span className="sr-only">Close</span>
+              </DialogClose>
             </div>
 
             {/* ── Messages ── */}
@@ -594,13 +632,13 @@ export function ChatDialog({
                                 {getMessageTime(message.createdAt)}
                               </span>
                               {isMe && (
-                                <span>
+                                <span className="inline-flex items-center" aria-label={message.read ? "Seen" : message.delivered ? "Delivered" : "Sent"}>
                                   {message.read ? (
-                                    <CheckCheck className={`w-3 h-3 ${ message.readAt ? 'text-sky-300' : 'text-primary-foreground/60' }`} />
+                                      <CheckCheck title="Seen" className="h-4 w-4 text-black" strokeWidth={2} />
                                   ) : message.delivered ? (
-                                    <CheckCheck className="w-3 h-3 text-primary-foreground/60" />
+                                      <CheckCheck title="Delivered" className="h-4 w-4 text-black" strokeWidth={2} />
                                   ) : (
-                                    <Check className="w-3 h-3 text-primary-foreground/50" />
+                                      <Check title="Sent" className="h-4 w-4 text-black" strokeWidth={2} />
                                   )}
                                 </span>
                               )}

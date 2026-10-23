@@ -32,6 +32,7 @@ import { VoteButtons } from "./VoteButtons";
 import { communicationService } from "@/services/ApiServices";
 import { toast } from "sonner";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 
 interface RedditPostProps {
   post: any;
@@ -40,6 +41,8 @@ interface RedditPostProps {
 
 export function RedditPostCard({ post, onUpdate }: RedditPostProps) {
   const navigate = useNavigate();
+  const authorId = post.author?._id || post.author?.id;
+  const authorIsOnline = useOnlineStatus(authorId);
   const { confirm: confirmAction, Dialog: ConfirmDialogEl } = useConfirm();
   const [isSaved, setIsSaved] = useState(post.savedBy?.includes(localStorage.getItem('userId')) || false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -222,7 +225,12 @@ export function RedditPostCard({ post, onUpdate }: RedditPostProps) {
                     {getUserInitials(post.author?.name || 'User')}
                   </AvatarFallback>
                 </Avatar>
-                <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-background rounded-full shadow-sm"></div>
+                {authorIsOnline && (
+                  <span
+                    className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background bg-emerald-500 shadow-sm"
+                    title="Online"
+                  />
+                )}
               </div>
               <div>
                 <div className="flex items-center gap-2 flex-wrap">

@@ -35,6 +35,9 @@ interface Event {
   time?: string;
   location?: string;
   participants: string[];
+  maxAttendees?: number;
+  isPaid?: boolean;
+  price?: number;
   isactive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -48,6 +51,9 @@ interface CreateEventForm {
   date: string;
   time: string;
   location: string;
+  maxAttendees: string;
+  isPaid: boolean;
+  price: string;
 }
 
 interface Participant {
@@ -71,7 +77,10 @@ export function Events() {
     description: "",
     date: "",
     time: "",
-    location: ""
+    location: "",
+    maxAttendees: "",
+    isPaid: false,
+    price: ""
   });
   const [formErrors, setFormErrors] = useState<Partial<CreateEventForm>>({});
   const [selectedEventParticipants, setSelectedEventParticipants] = useState<Participant[]>([]);
@@ -90,7 +99,10 @@ export function Events() {
     description: "",
     date: "",
     time: "",
-    location: ""
+    location: "",
+    maxAttendees: "",
+    isPaid: false,
+    price: ""
   });
   const [editFormErrors, setEditFormErrors] = useState<Partial<CreateEventForm>>({});
 
@@ -167,7 +179,10 @@ export function Events() {
         description: formData.description.trim(),
         date: formData.date,
         time: formData.time || undefined,
-        location: formData.location.trim() || undefined
+        location: formData.location.trim() || undefined,
+        maxAttendees: formData.maxAttendees ? Number(formData.maxAttendees) : null,
+        isPaid: formData.isPaid,
+        price: formData.isPaid ? Number(formData.price || 0) : 0
       };
 
       await eventService.createEvent(eventData);
@@ -179,7 +194,10 @@ export function Events() {
         description: "",
         date: "",
         time: "",
-        location: ""
+        location: "",
+        maxAttendees: "",
+        isPaid: false,
+        price: ""
       });
       setFormErrors({});
       setIsCreateDialogOpen(false);
@@ -200,7 +218,10 @@ export function Events() {
       description: "",
       date: "",
       time: "",
-      location: ""
+      location: "",
+      maxAttendees: "",
+      isPaid: false,
+      price: ""
     });
     setFormErrors({});
   };
@@ -213,7 +234,10 @@ export function Events() {
       description: event.description,
       date: event.date ? new Date(event.date).toISOString().split('T')[0] : "",
       time: event.time || "",
-      location: event.location || ""
+      location: event.location || "",
+      maxAttendees: event.maxAttendees?.toString() || "",
+      isPaid: event.isPaid || false,
+      price: event.price?.toString() || ""
     });
     setEditFormErrors({});
     setIsEditDialogOpen(true);
@@ -246,7 +270,10 @@ export function Events() {
         description: editFormData.description.trim(),
         date: editFormData.date,
         time: editFormData.time || undefined,
-        location: editFormData.location.trim() || undefined
+        location: editFormData.location.trim() || undefined,
+        maxAttendees: editFormData.maxAttendees ? Number(editFormData.maxAttendees) : null,
+        isPaid: editFormData.isPaid,
+        price: editFormData.isPaid ? Number(editFormData.price || 0) : 0
       };
 
       await eventService.updateEvent(editingEvent._id, eventData);
@@ -713,6 +740,21 @@ export function Events() {
                 />
               </div>
 
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="maxAttendees">Seat Limit</Label>
+                  <Input id="maxAttendees" type="number" min="1" placeholder="Unlimited" value={formData.maxAttendees} onChange={(e) => handleInputChange("maxAttendees", e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="price">Entry Fee (INR)</Label>
+                  <Input id="price" type="number" min="0" disabled={!formData.isPaid} placeholder="0" value={formData.price} onChange={(e) => handleInputChange("price", e.target.value)} />
+                  <label className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" checked={formData.isPaid} onChange={(e) => setFormData(prev => ({ ...prev, isPaid: e.target.checked }))} />
+                    Paid event
+                  </label>
+                </div>
+              </div>
+
               {/* Form Actions */}
               <div className="flex justify-end gap-3 pt-4 border-t border-card-border/20">
                 <Button
@@ -1123,6 +1165,21 @@ export function Events() {
               />
             </div>
 
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="edit-maxAttendees">Seat Limit</Label>
+                <Input id="edit-maxAttendees" type="number" min="1" placeholder="Unlimited" value={editFormData.maxAttendees} onChange={(e) => handleEditInputChange("maxAttendees", e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-price">Entry Fee (INR)</Label>
+                <Input id="edit-price" type="number" min="0" disabled={!editFormData.isPaid} placeholder="0" value={editFormData.price} onChange={(e) => handleEditInputChange("price", e.target.value)} />
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={editFormData.isPaid} onChange={(e) => setEditFormData(prev => ({ ...prev, isPaid: e.target.checked }))} />
+                  Paid event
+                </label>
+              </div>
+            </div>
+
             <div className="flex justify-end gap-3 pt-4 border-t border-card-border/20">
               <Button
                 type="button"
@@ -1157,5 +1214,3 @@ export function Events() {
     </div>
   );
 }
-
-

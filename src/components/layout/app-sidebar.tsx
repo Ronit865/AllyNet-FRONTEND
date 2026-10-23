@@ -18,6 +18,7 @@ import { useAuth } from "@/context/AuthContext";
 import { authService } from "@/services/ApiServices";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useSocket } from "@/hooks/useSocket";
 
 /* ─── Nav definitions ────────────────────────────────── */
 const userNav = [
@@ -85,6 +86,7 @@ export function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, admin, logout, userType } = useAuth();
+  const { isConnected } = useSocket();
   const isAdminMode = location.pathname.startsWith("/admin");
 
   const [isDark, setIsDark] = useState(() => {
@@ -249,7 +251,7 @@ export function AppSidebar() {
                   <button
                     onClick={toggleTheme}
                     className={cn(
-                      "sidebar-nav-item w-full",
+                      "sidebar-nav-item w-full justify-start",
                       isMobile && "py-2.5 text-sm"
                     )}
                   >
@@ -269,16 +271,24 @@ export function AppSidebar() {
             <>
               <Separator className="my-2" />
               {open ? (
-                <div className="flex items-center gap-2 px-1 py-1 rounded-md hover:bg-accent/60 transition-colors group">
-                  <Avatar className="h-6 w-6 shrink-0">
-                    <AvatarImage src={avatarSrc} />
-                    <AvatarFallback className="text-[10px] font-semibold bg-primary/10 text-primary">
-                      {avatarFallback}
-                    </AvatarFallback>
-                  </Avatar>
+                <div className="flex min-h-9 items-center gap-2 px-1 py-1 rounded-md hover:bg-accent/60 transition-colors group">
+                  <div className="relative shrink-0">
+                    <Avatar className="h-7 w-7">
+                      <AvatarImage src={avatarSrc} />
+                      <AvatarFallback className="text-[10px] font-semibold bg-primary/10 text-primary">
+                        {avatarFallback}
+                      </AvatarFallback>
+                    </Avatar>
+                    {isConnected && (
+                      <span
+                        className="absolute bottom-0 right-0 h-2 w-2 rounded-full border-2 border-sidebar bg-emerald-500"
+                        title="Online"
+                      />
+                    )}
+                  </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[12px] font-semibold leading-tight truncate text-foreground">{displayName}</p>
-                    <p className="text-[10px] text-muted-foreground truncate">{displayEmail}</p>
+                    <p className="truncate text-xs font-semibold leading-tight text-foreground">{displayName}</p>
+                    <p className="truncate text-[11px] leading-tight text-muted-foreground">{displayEmail}</p>
                   </div>
                   <Tooltip delayDuration={0}>
                     <TooltipTrigger asChild>
@@ -295,13 +305,21 @@ export function AppSidebar() {
               ) : (
                 <Tooltip delayDuration={0}>
                   <TooltipTrigger asChild>
-                    <div className="flex justify-center pt-0.5">
-                      <Avatar className="h-6 w-6 cursor-pointer hover:ring-2 hover:ring-primary/20 transition-all rounded-full">
-                        <AvatarImage src={avatarSrc} />
-                        <AvatarFallback className="text-[10px] font-semibold bg-primary/10 text-primary">
-                          {avatarFallback}
-                        </AvatarFallback>
-                      </Avatar>
+                    <div className="flex justify-center py-1">
+                      <div className="relative">
+                        <Avatar className="h-7 w-7 cursor-pointer rounded-full transition-all hover:ring-2 hover:ring-primary/20">
+                          <AvatarImage src={avatarSrc} />
+                          <AvatarFallback className="text-[10px] font-semibold bg-primary/10 text-primary">
+                            {avatarFallback}
+                          </AvatarFallback>
+                        </Avatar>
+                        {isConnected && (
+                          <span
+                            className="absolute bottom-0 right-0 h-2 w-2 rounded-full border-2 border-sidebar bg-emerald-500"
+                            title="Online"
+                          />
+                        )}
+                      </div>
                     </div>
                   </TooltipTrigger>
                   <TooltipContent side="right" className="text-xs">

@@ -34,7 +34,7 @@ export function OnlineStatusIndicator({
   return (
     <div
       className={cn(
-        "absolute rounded-full border-background",
+        "absolute z-10 rounded-full border-background",
         sizeClasses[size],
         positionClasses[position],
         online ? "bg-green-500" : "bg-gray-400",

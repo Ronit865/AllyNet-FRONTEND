@@ -61,23 +61,25 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     });
 
     // Online presence handlers
-    newSocket.on('user:online', (data: { userId: string; socketId: string }) => {
-      console.log('[Socket] User online:', data.userId);
-      setOnlineUsers(prev => new Set(prev).add(data.userId));
+    newSocket.on('user:online', (data: { userId: string }) => {
+      const userId = String(data.userId);
+      console.log('[Socket] User online:', userId);
+      setOnlineUsers(prev => new Set(prev).add(userId));
     });
 
     newSocket.on('user:offline', (data: { userId: string }) => {
-      console.log('[Socket] User offline:', data.userId);
+      const userId = String(data.userId);
+      console.log('[Socket] User offline:', userId);
       setOnlineUsers(prev => {
         const updated = new Set(prev);
-        updated.delete(data.userId);
+        updated.delete(userId);
         return updated;
       });
     });
 
     newSocket.on('presence:list', (data: { onlineUsers: string[] }) => {
       console.log('[Socket] Online users list:', data.onlineUsers.length);
-      setOnlineUsers(new Set(data.onlineUsers));
+      setOnlineUsers(new Set(data.onlineUsers.map(String)));
     });
 
     setSocket(newSocket);

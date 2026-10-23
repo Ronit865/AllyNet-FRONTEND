@@ -105,7 +105,7 @@ export function ConfirmDialog({
             size="sm"
             onClick={onCancel}
             disabled={isLoading}
-            className="h-8 text-xs font-medium"
+            className="h-9 px-4 text-sm font-medium"
           >
             {cancelText}
           </Button>
@@ -113,7 +113,7 @@ export function ConfirmDialog({
             size="sm"
             onClick={onConfirm}
             disabled={isLoading}
-            className={cn("h-8 text-xs font-medium", confirmClass)}
+            className={cn("h-9 px-4 text-sm font-medium", confirmClass)}
           >
             {isLoading ? (
               <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Working…</>

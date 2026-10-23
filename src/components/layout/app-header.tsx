@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { ChatDialog } from "@/components/chat/ChatDialog";
 import { cn } from "@/lib/utils";
+import { useSocket } from "@/hooks/useSocket";
 import { motion, AnimatePresence } from "framer-motion";
 
 /* ─── Relative time ────────────────────────────────────── */
@@ -47,6 +48,7 @@ function NotifIcon({ type }: { type: string }) {
 /* ─── Main Header ─────────────────────────────────────── */
 export function AppHeader() {
   const { user, admin, logout, userType, isInitialized } = useAuth();
+  const { isConnected } = useSocket();
   const navigate = useNavigate();
 
   const [notifications, setNotifications]   = useState<any[]>([]);
@@ -251,12 +253,20 @@ export function AppHeader() {
                 variant="ghost"
                 className="h-8 gap-2 px-2 rounded-md font-normal hover:bg-accent"
               >
-                <Avatar className="h-5 w-5">
-                  <AvatarImage src={avatarSrc} />
-                  <AvatarFallback className="text-[9px] font-bold bg-primary/10 text-primary">
-                    {avatarFallback}
-                  </AvatarFallback>
-                </Avatar>
+                <span className="relative">
+                  <Avatar className="h-6 w-6">
+                    <AvatarImage src={avatarSrc} />
+                    <AvatarFallback className="text-[9px] font-bold bg-primary/10 text-primary">
+                      {avatarFallback}
+                    </AvatarFallback>
+                  </Avatar>
+                  {isConnected && (
+                    <span
+                      className="absolute bottom-0 right-0 h-2 w-2 rounded-full border-2 border-background bg-emerald-500"
+                      title="Online"
+                    />
+                  )}
+                </span>
                 <span className="text-[12px] font-medium hidden sm:inline text-foreground">{displayName.split(" ")[0]}</span>
               </Button>
             </DropdownMenuTrigger>

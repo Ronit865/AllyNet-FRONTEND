@@ -779,90 +779,91 @@ export default function Jobs() {
 
       {/* Job Details Dialog */}
       <Dialog open={jobDetailsOpen} onOpenChange={setJobDetailsOpen}>
-        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="flex max-h-[85vh] max-w-3xl flex-col gap-0 overflow-hidden p-0">
+          <DialogHeader className="shrink-0 border-b px-6 py-5 pr-12">
             <DialogTitle className="text-2xl font-bold">{jobDetailsData?.title}</DialogTitle>
             <DialogDescription className="flex items-center gap-2">
-              <Building2 className="w-4 h-4" />
+              <Building2 className="h-4 w-4" />
               {jobDetailsData?.company}
             </DialogDescription>
+            {jobDetailsData?.isVerified && (
+              <Badge variant="default" className="mt-2 flex w-fit items-center gap-1">
+                <CheckCircle className="h-3 w-3" />
+                Verified
+              </Badge>
+            )}
           </DialogHeader>
 
           {jobDetailsData && (
-            <div className="space-y-6">
-              {/* Status Badge */}
-              {jobDetailsData.isVerified && (
-                <Badge variant="default" className="flex items-center gap-1 w-fit">
-                  <CheckCircle className="w-3 h-3" />
-                  Verified
-                </Badge>
-              )}
-
-              {/* Description */}
-              <div>
-                <h3 className="text-lg font-semibold mb-2">Job Description</h3>
-                <p className="text-muted-foreground whitespace-pre-wrap">{jobDetailsData.description}</p>
-              </div>
-
-              {/* Job Details Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-3">
-                  <div className="flex items-start gap-3">
-                    <MapPin className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Location</p>
-                      <p className="font-semibold">{jobDetailsData.location}</p>
-                    </div>
+            <>
+              <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5 [scrollbar-gutter:stable]">
+                <div className="space-y-6">
+                  {/* Description */}
+                  <div>
+                    <h3 className="mb-2 text-lg font-semibold">Job Description</h3>
+                    <p className="whitespace-pre-wrap text-muted-foreground">{jobDetailsData.description}</p>
                   </div>
 
-                  <div className="flex items-start gap-3">
-                    <IndianRupee className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Salary</p>
-                      <p className="font-semibold">₹{jobDetailsData.salary.toLocaleString()}/year</p>
-                    </div>
-                  </div>
+                  {/* Job Details Grid */}
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div className="space-y-3">
+                      <div className="flex items-start gap-3">
+                        <MapPin className="mt-0.5 h-5 w-5 flex-shrink-0 text-primary" />
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">Location</p>
+                          <p className="font-semibold">{jobDetailsData.location}</p>
+                        </div>
+                      </div>
 
-                  <div className="flex items-start gap-3">
-                    <Briefcase className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Job Type</p>
-                      <p className="font-semibold">{jobDetailsData.jobType}</p>
-                    </div>
-                  </div>
-                </div>
+                      <div className="flex items-start gap-3">
+                        <IndianRupee className="mt-0.5 h-5 w-5 flex-shrink-0 text-primary" />
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">Salary</p>
+                          <p className="font-semibold">₹{jobDetailsData.salary.toLocaleString()}/year</p>
+                        </div>
+                      </div>
 
-                <div className="space-y-3">
-                  <div className="flex items-start gap-3">
-                    <Building2 className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Category</p>
-                      <p className="font-semibold">{jobDetailsData.category}</p>
+                      <div className="flex items-start gap-3">
+                        <Briefcase className="mt-0.5 h-5 w-5 flex-shrink-0 text-primary" />
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">Job Type</p>
+                          <p className="font-semibold">{jobDetailsData.jobType}</p>
+                        </div>
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="flex items-start gap-3">
-                    <Calendar className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Experience Required</p>
-                      <p className="font-semibold">{jobDetailsData.experienceRequired}</p>
-                    </div>
-                  </div>
+                    <div className="space-y-3">
+                      <div className="flex items-start gap-3">
+                        <Building2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-primary" />
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">Category</p>
+                          <p className="font-semibold">{jobDetailsData.category}</p>
+                        </div>
+                      </div>
 
-                  <div className="flex items-start gap-3">
-                    <Calendar className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Posted On</p>
-                      <p className="font-semibold">{formatDate(jobDetailsData.createdAt)}</p>
+                      <div className="flex items-start gap-3">
+                        <Calendar className="mt-0.5 h-5 w-5 flex-shrink-0 text-primary" />
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">Experience Required</p>
+                          <p className="font-semibold">{jobDetailsData.experienceRequired}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3">
+                        <Calendar className="mt-0.5 h-5 w-5 flex-shrink-0 text-primary" />
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">Posted On</p>
+                          <p className="font-semibold">{formatDate(jobDetailsData.createdAt)}</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex gap-3 pt-4">
+              <div className="shrink-0 border-t bg-background px-6 py-4">
                 <Button
-                  className={`flex-1 ${hasApplied(jobDetailsData) ? ' hover: hover: text-white font-semibold shadow-lg' : ''}`}
+                  className={`w-full ${hasApplied(jobDetailsData) ? ' hover: hover: text-white font-semibold shadow-lg' : ''}`}
                   onClick={() => {
                     if (hasApplied(jobDetailsData)) {
                       handleUnapply(jobDetailsData._id);
@@ -874,7 +875,7 @@ export default function Jobs() {
                 >
                   {hasApplied(jobDetailsData) ? (
                     <>
-                      <CheckCircle className="w-4 h-4 mr-2" />
+                      <CheckCircle className="mr-2 h-4 w-4" />
                       Applied - Click to Withdraw
                     </>
                   ) : (
@@ -882,7 +883,7 @@ export default function Jobs() {
                   )}
                 </Button>
               </div>
-            </div>
+            </>
           )}
         </DialogContent>
       </Dialog>
@@ -892,4 +893,3 @@ export default function Jobs() {
     </div>
   );
 }
-

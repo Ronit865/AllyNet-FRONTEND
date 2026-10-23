@@ -210,6 +210,18 @@ export const eventService = {
     return await api.post(`/events/addUserToEvent/${eventId}`);
   },
 
+  createPaymentOrder: async (eventId: string): Promise<ApiResponse> => {
+    return await api.post(`/events/payment/order/${eventId}`);
+  },
+
+  verifyPayment: async (eventId: string, paymentData: {
+    razorpay_order_id: string;
+    razorpay_payment_id: string;
+    razorpay_signature: string;
+  }): Promise<ApiResponse> => {
+    return await api.post(`/events/payment/verify/${eventId}`, paymentData);
+  },
+
   leaveEvent: async (eventId: string): Promise<ApiResponse> => {
     return await api.post(`/events/removeUserFromEvent/${eventId}`);
   },
@@ -251,6 +263,18 @@ export const donationService = {
 
   contributeToCampaign: async (campaignId: string, amount: number): Promise<ApiResponse> => {
     return await api.post(`/donations/donationAmount/${campaignId}`, { amount });
+  },
+
+  createPaymentOrder: async (campaignId: string, amount: number): Promise<ApiResponse> => {
+    return await api.post(`/donations/payment/order/${campaignId}`, { amount });
+  },
+
+  verifyPayment: async (campaignId: string, paymentData: {
+    razorpay_order_id: string;
+    razorpay_payment_id: string;
+    razorpay_signature: string;
+  }): Promise<ApiResponse> => {
+    return await api.post(`/donations/payment/verify/${campaignId}`, paymentData);
   },
 
   getCampaignDonors: async (campaignId: string) => {
